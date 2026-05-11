@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Header Analyzer</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070b18'/%3E%3Ccircle cx='28' cy='28' r='14' fill='none' stroke='%2319c7d4' stroke-width='6'/%3E%3Cpath d='M39 39 L52 52' stroke='%238b5cf6' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='28' cy='28' r='7' fill='%23111827'/%3E%3C/svg%3E">
+    <style>
+        :root {
+            --bg: #070b18;
+            --surface: #111827;
+            --surface-2: #0d1424;
+            --border: rgba(124, 140, 181, 0.22);
+            --text: #e6edf7;
+            --text-muted: #8d9ab8;
+            --primary: #19c7d4;
+            --primary-hover: #42e8f2;
+            --accent: #8b5cf6;
+            --success: #35d07f;
+            --warning: #f7b955;
+            --error: #ff5f8f;
+            --info: #56a8ff;
+            --badge-pass: #17b978;
+            --badge-fail: #e84678;
+            --badge-warn: #d99b35;
+            --badge-none: #64748b;
+            --badge-info: #3787ff;
+            --shadow: rgba(0,0,0,0.48);
+            --glow: rgba(25,199,212,0.22);
+        }
+        .light { --bg: #eef4fb; --surface: #ffffff; --surface-2: #f7faff; --border: rgba(45,64,99,0.18); --text: #152033; --text-muted: #5c6b84; --primary: #0369a1; --primary-hover: #0284c7; --accent: #6d28d9; --shadow: rgba(15,23,42,0.12); --glow: rgba(2,132,199,0.16); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', 'Trebuchet MS', -apple-system, BlinkMacSystemFont, sans-serif; background: radial-gradient(circle at 20% 0%, rgba(139,92,246,0.18), transparent 28%), radial-gradient(circle at 85% 12%, rgba(25,199,212,0.14), transparent 30%), var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; letter-spacing: 0.01em; }
+        .header { position: sticky; top: 0; z-index: 100; background: rgba(17,24,39,0.88); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); padding: 0.85rem 1.5rem; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 12px 32px rgba(0,0,0,0.24); }
+        .light .header { background: rgba(255,255,255,0.86); }
+        .logo { width: 32px; height: 32px; }
+        .logo svg { width: 100%; height: 100%; }
+        .header h1 { font-size: 1.05rem; font-weight: 700; flex: 1; letter-spacing: 0.08em; text-transform: uppercase; }
+        .theme-toggle { background: linear-gradient(135deg, rgba(25,199,212,0.12), rgba(139,92,246,0.1)); border: 1px solid var(--border); border-radius: 10px; padding: 0.55rem; cursor: pointer; color: var(--text); display: flex; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02); }
+        .theme-toggle:hover { border-color: var(--primary); box-shadow: 0 0 0 3px var(--glow); }
+        .theme-toggle svg { width: 18px; height: 18px; }
+        .lang-toggle { display: flex; gap: 0.2rem; padding: 0.2rem; border: 1px solid var(--border); border-radius: 10px; background: rgba(255,255,255,0.04); }
+        .lang-btn { border: none; border-radius: 7px; padding: 0.38rem 0.55rem; background: transparent; color: var(--text-muted); font-size: 0.72rem; font-weight: 850; cursor: pointer; letter-spacing: 0.06em; }
+        .lang-btn.active { color: #fff; background: linear-gradient(135deg, var(--primary), var(--accent)); box-shadow: 0 8px 22px var(--glow); }
+        .light .lang-btn.active { color: #fff; }
+        .main { display: flex; min-height: calc(100vh - 57px); }
+        .input-panel { width: 400px; min-width: 400px; background: linear-gradient(180deg, rgba(17,24,39,0.96), rgba(13,20,36,0.96)); border-right: 1px solid var(--border); padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .light .input-panel { background: linear-gradient(180deg, #fff, #f7faff); }
+        .input-panel label { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--primary); }
+        .input-panel textarea { flex: 1; min-height: 300px; background: rgba(7,11,24,0.72); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem; color: var(--text); font-family: 'Cascadia Mono', 'Consolas', monospace; font-size: 0.75rem; resize: none; box-shadow: inset 0 0 24px rgba(0,0,0,0.18); }
+        .light .input-panel textarea { background: #f8fbff; }
+        .input-panel textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--glow), inset 0 0 24px rgba(0,0,0,0.18); }
+        .btn-row { display: flex; gap: 0.5rem; }
+        .btn { padding: 0.68rem 1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 750; cursor: pointer; border: none; font-family: inherit; letter-spacing: 0.02em; transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease; }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; flex: 1; box-shadow: 0 10px 28px rgba(25,199,212,0.22); }
+        .btn-primary:hover { background: linear-gradient(135deg, var(--primary-hover), var(--accent)); box-shadow: 0 14px 36px rgba(25,199,212,0.28); }
+        .btn-secondary { background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--text); }
+        .light .btn-secondary { background: rgba(255,255,255,0.74); }
+        .btn-secondary:hover { border-color: var(--primary); box-shadow: 0 0 0 3px var(--glow); }
+        .link-btn { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; color: var(--primary); font-size: 0.82rem; cursor: pointer; text-decoration: none; padding: 0.68rem 1rem; font-weight: 750; letter-spacing: 0.02em; transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease; display: block; text-align: center; }
+        .light .link-btn { background: rgba(255,255,255,0.74); }
+        .link-btn:hover { border-color: var(--primary); box-shadow: 0 0 0 3px var(--glow); transform: translateY(-1px); }
+        .results-panel { flex: 1; padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1.55rem; }
+        .report-actions { display: none; position: sticky; top: 57px; z-index: 80; background: rgba(17,24,39,0.86); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); padding: 0.75rem 1rem; gap: 0.5rem; align-items: center; }
+        .light .report-actions { background: rgba(255,255,255,0.86); }
+        .drawer-backdrop { display: none; position: fixed; inset: 57px 0 0 0; background: rgba(0,0,0,0.55); z-index: 85; }
+        body:not(.report-mode) .main { align-items: center; justify-content: center; padding: 1rem; }
+        body:not(.report-mode) .input-panel { width: min(900px, calc(100vw - 2rem)); min-width: 0; height: calc(100vh - 110px); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 24px 80px var(--shadow), 0 0 0 1px rgba(255,255,255,0.03); }
+        body:not(.report-mode) .results-panel { display: none; }
+        body.report-mode .report-actions { display: flex; }
+        body.report-mode .main { min-height: calc(100vh - 111px); }
+        body.report-mode .results-panel { width: 100%; padding: 1.25rem 1.75rem 2.5rem; }
+        body.report-mode .input-panel { position: fixed; top: 57px; left: 0; bottom: 0; z-index: 90; transform: translateX(-105%); transition: transform 0.2s ease; box-shadow: 20px 0 50px var(--shadow); }
+        body.input-open .input-panel { transform: translateX(0); }
+        body.input-open .drawer-backdrop { display: block; }
+        .card { background: linear-gradient(180deg, rgba(17,24,39,0.94), rgba(13,20,36,0.94)); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 16px 42px rgba(0,0,0,0.20); margin-bottom: 0.15rem; }
+        .card + .card { margin-top: 0.35rem; }
+        .light .card { background: linear-gradient(180deg, #ffffff, #f8fbff); box-shadow: 0 16px 36px rgba(15,23,42,0.08); }
+        .card-header { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.65rem; background: linear-gradient(135deg, rgba(25,199,212,0.10), rgba(139,92,246,0.08)); }
+        .card-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 0.7rem; color: #fff; font-weight: 800; box-shadow: 0 8px 22px rgba(0,0,0,0.18); }
+        .card-icon.success { background: var(--success); }
+        .card-icon.error { background: var(--error); }
+        .card-icon.warning { background: var(--warning); }
+        .card-icon.info { background: var(--info); }
+        .card-icon.default { background: var(--primary); }
+        .card-title { font-weight: 800; font-size: 0.86rem; letter-spacing: 0.045em; text-transform: uppercase; }
+        .card-body { padding: 1rem; }
+        .field-row { display: flex; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+        .field-row:last-child { border-bottom: none; }
+        .field-key { width: 180px; min-width: 180px; font-family: 'Cascadia Mono', 'Consolas', monospace; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; }
+        .field-value { flex: 1; font-family: 'Cascadia Mono', 'Consolas', monospace; font-size: 0.74rem; word-break: break-all; }
+        .field-desc { color: var(--text-muted); font-size: 0.625rem; margin-left: 0.5rem; }
+        .badge { display: inline-block; padding: 0.16rem 0.54rem; border-radius: 999px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.055em; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12); }
+        .badge-pass { background: var(--badge-pass); color: #fff; }
+        .badge-fail { background: var(--badge-fail); color: #fff; }
+        .badge-warn { background: var(--badge-warn); color: #fff; }
+        .badge-none { background: var(--badge-none); color: #fff; }
+        .badge-info { background: var(--badge-info); color: #fff; }
+        .risk-banner { padding: 1.1rem; border-radius: 14px; text-align: center; font-weight: 850; font-size: 1rem; margin-bottom: 1rem; letter-spacing: 0.09em; text-transform: uppercase; }
+        .risk-low { background: linear-gradient(135deg, rgba(53,208,127,0.18), rgba(25,199,212,0.08)); border: 1px solid rgba(53,208,127,0.55); color: var(--success); }
+        .risk-medium { background: linear-gradient(135deg, rgba(247,185,85,0.2), rgba(139,92,246,0.06)); border: 1px solid rgba(247,185,85,0.58); color: var(--warning); }
+        .risk-high { background: linear-gradient(135deg, rgba(255,95,143,0.22), rgba(139,92,246,0.10)); border: 1px solid rgba(255,95,143,0.68); color: var(--error); box-shadow: 0 0 36px rgba(255,95,143,0.12); }
+        .finding-ok { background: var(--success); }
+        .finding-fail { background: var(--error); }
+        .finding-warn { background: var(--warning); }
+        .finding-info { background: var(--info); }
+        .hop-chain { display: flex; flex-direction: column; gap: 0.75rem; }
+        .hop-item { display: flex; gap: 0.75rem; }
+        .hop-number { width: 28px; height: 28px; background: var(--primary); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; flex-shrink: 0; }
+        .hop-card { flex: 1; background: rgba(7,11,24,0.5); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem; }
+        .light .hop-card { background: #f8fbff; }
+        .hop-route { font-size: 0.75rem; font-family: 'Cascadia Mono', 'Consolas', monospace; margin-bottom: 0.5rem; color: var(--primary); }
+        .hop-detail { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--text-muted); }
+        .hop-detail span { display: flex; align-items: center; gap: 0.25rem; }
+        .hop-raw { margin-top: 0.5rem; padding: 0.6rem; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-muted); font-family: 'Cascadia Mono', 'Consolas', monospace; font-size: 0.62rem; word-break: break-word; background: rgba(0,0,0,0.12); }
+        .hop-alert { margin-top: 0.5rem; padding: 0.35rem 0.5rem; border-radius: 4px; background: rgba(201, 80, 122, 0.14); color: var(--error); font-size: 0.68rem; }
+        .hop-delay { padding: 0.125rem 0.375rem; border-radius: 4px; font-size: 0.625rem; font-weight: 600; }
+        .delay-green { background: rgba(76, 175, 80, 0.2); color: var(--success); }
+        .delay-yellow { background: rgba(212, 160, 86, 0.2); color: var(--warning); }
+        .delay-red { background: rgba(201, 80, 122, 0.2); color: var(--error); }
+        .analysis-table, .antispam-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; background: var(--surface); }
+        .analysis-table th, .antispam-table th { text-align: left; min-height: 48px; padding: 0.9rem 0.85rem; background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; font-weight: 800; border-bottom: 2px solid var(--border); text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.08em; line-height: 1.35; }
+        .analysis-table td, .antispam-table td { min-height: 54px; padding: 0.9rem 0.85rem; border-bottom: 1px solid var(--border); font-family: 'Cascadia Mono', 'Consolas', monospace; vertical-align: top; line-height: 1.55; }
+        .analysis-table tr:nth-child(even), .antispam-table tr:nth-child(even) { background: rgba(0,0,0,0.1); }
+        .analysis-table tr:hover, .antispam-table tr:hover { background: rgba(79,152,163,0.15); }
+        .analysis-table td:first-child, .antispam-table td:first-child { font-weight: 600; color: var(--primary); width: 120px; background: var(--surface); }
+        .analysis-evidence { color: var(--text-muted); font-size: 0.76rem; line-height: 1.55; word-break: break-word; }
+        .table-card-body { padding: 0.9rem; overflow-x: auto; }
+        .table-card-body .analysis-table { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .evidence-block { margin-top: 0.85rem; padding: 0.85rem; border: 1px dashed var(--border); border-radius: 10px; background: rgba(0,0,0,0.12); }
+        .light .evidence-block { background: rgba(15,23,42,0.04); }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+        .summary-item { background: rgba(7,11,24,0.42); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem; position: relative; overflow: hidden; }
+        .summary-item:before { content: ''; position: absolute; inset: 0 auto 0 0; width: 3px; background: linear-gradient(180deg, var(--primary), var(--accent)); opacity: 0.8; }
+        .light .summary-item { background: #f8fbff; }
+        .summary-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.25rem; font-weight: 800; }
+        .summary-value { font-family: 'Cascadia Mono', 'Consolas', monospace; font-size: 0.85rem; word-break: break-all; }
+        .copy-btn { position: sticky; bottom: 1rem; align-self: flex-end; }
+        @media print {
+            body { background: #fff; color: #000; }
+            .header, .input-panel, .copy-btn, .theme-toggle { display: none !important; }
+            .main { display: block; }
+            .results-panel { width: 100%; padding: 0; }
+            .card { border: 1px solid #ccc; break-inside: avoid; margin-bottom: 1rem; }
+            .card-header { background: #f0f0f0; border-bottom: 1px solid #ccc; }
+            .card-body { padding: 0.5rem; }
+            .field-row { border-bottom: 1px solid #eee; }
+            .field-key { color: #666; }
+            .field-value { color: #000; }
+            .badge { border: 1px solid currentColor; padding: 0.1rem 0.3rem; font-size: 0.6rem; }
+            .badge-pass { background: #e8f5e9; color: #2e7d32; }
+            .badge-fail { background: #ffebee; color: #c62828; }
+            .badge-warn { background: #fff3e0; color: #ef6c00; }
+            .badge-none { background: #f5f5f5; color: #666; }
+            .analysis-table th, .antispam-table th { background: #eee; }
+            .analysis-table td, .analysis-table th, .antispam-table td, .antispam-table th { border: 1px solid #ccc; }
+            .risk-banner { border: 2px solid #000; }
+            .risk-high { background: #ffebee; color: #c62828; }
+            .risk-medium { background: #fff3e0; color: #ef6c00; }
+            .risk-low { background: #e8f5e9; color: #2e7d32; }
+            .hop-chain { page-break-inside: avoid; }
+            .hop-card { border: 1px solid #ccc; margin-bottom: 0.5rem; }
+        }
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); text-align: center; padding: 2rem; }
+        .domain-warning { background: rgba(212, 160, 86, 0.15); border: 1px solid var(--warning); border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.75rem; color: var(--warning); margin-top: 0.5rem; }
+        .security-alert-card { border: 1px solid rgba(201, 80, 122, 0.55); background: linear-gradient(135deg, rgba(201,80,122,0.12), rgba(79,152,163,0.05)); box-shadow: 0 18px 45px rgba(0,0,0,0.18); }
+        .security-alert-header { background: linear-gradient(135deg, rgba(201,80,122,0.22), rgba(201,80,122,0.08)); border-bottom: 1px solid rgba(201,80,122,0.4); }
+        .security-alert-title { display: flex; flex-direction: column; gap: 0.15rem; }
+        .security-alert-title span:first-child { font-size: 0.9rem; }
+        .security-alert-subtitle { color: var(--text-muted); font-size: 0.68rem; font-weight: 400; }
+        .security-alert-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem; padding: 1rem; }
+        .security-alert-item { display: flex; gap: 0.65rem; align-items: flex-start; background: rgba(0,0,0,0.16); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; }
+        .light .security-alert-item { background: rgba(255,255,255,0.55); }
+        .security-alert-severity { flex-shrink: 0; min-width: 52px; text-align: center; }
+        .security-alert-text { font-size: 0.78rem; line-height: 1.4; color: var(--text); }
+        .security-alert-evidence { margin-top: 0.45rem; color: var(--text-muted); font-family: 'Cascadia Mono', 'Consolas', monospace; font-size: 0.64rem; line-height: 1.45; word-break: break-word; }
+        .forefront-header { background: linear-gradient(135deg, rgba(25,199,212,0.10), rgba(139,92,246,0.08)) !important; }
+        .forefront-header.is-alert { background: linear-gradient(135deg, rgba(255,95,143,0.18), rgba(139,92,246,0.08)) !important; }
+        .forefront-header .card-title { color: var(--text) !important; }
+        .shortcut-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+        .hidden { display: none !important; }
+        @media (max-width: 900px) { .main { flex-direction: column; } .input-panel { width: 100%; min-width: 100%; border-right: none; border-bottom: 1px solid var(--border); } .input-panel textarea { min-height: 200px; } body.report-mode .input-panel { width: min(100vw, 420px); min-width: 0; } .report-actions { overflow-x: auto; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+        <h1 id="appTitle">Email Header Analyzer</h1>
+        <div class="lang-toggle" aria-label="Language selector">
+            <button class="lang-btn" id="langEsBtn" type="button">ES</button>
+            <button class="lang-btn" id="langEnBtn" type="button">EN</button>
+        </div>
+        <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+    </header>
+    <div class="report-actions" id="reportActions">
+        <button class="btn btn-secondary" id="editHeadersBtn">Edit Headers</button>
+        <button class="btn btn-primary" id="reanalyzeBtn">Re-analyze</button>
+        <button class="btn btn-secondary" id="topCopyBtn">Copy Report</button>
+        <button class="btn btn-secondary" id="topPdfBtn">Export PDF</button>
+        <button class="btn btn-secondary" id="reportClearBtn">Clear</button>
+    </div>
+    <main class="main">
+        <aside class="input-panel">
+            <label for="headersInput">Raw Email Headers</label>
+            <textarea id="headersInput" placeholder="Paste raw email headers here..."></textarea>
+            <div class="btn-row">
+                <button class="btn btn-primary" id="analyzeBtn">Analyze</button>
+                <button class="btn btn-secondary" id="clearBtn">Clear</button>
+            </div>
+            <button class="link-btn" id="loadSampleBtn">Load Sample</button>
+            <p class="shortcut-hint">Press Ctrl+Enter to analyze</p>
+        </aside>
+        <section class="results-panel" id="resultsPanel">
+            <div class="empty-state" id="emptyState"><p>Paste email headers and click Analyze</p></div>
+            <div id="reportContainer"></div>
+        </section>
+    </main>
+    <div class="drawer-backdrop" id="drawerBackdrop"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sampleHeaders = `Delivered-To: victim@example.com
+Received: by 2002:a05:6a10:2b02:0:0:0:0 with SMTP id id2csp123456pjk;
+        Tue, 7 May 2024 14:23:45 -0700 (PDT)
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@legitimate-sender.com header.s=selector1 header.b=abc123;
+       spf=pass (google.com: domain of newsletter@legitimate-sender.com designates 203.0.113.50 as permitted sender) smtp.mailfrom=newsletter@legitimate-sender.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=legitimate-sender.com
+Received-SPF: pass (google.com: domain of newsletter@legitimate-sender.com designates 203.0.113.50 as permitted sender) client-ip=203.0.113.50;
+Received: from mail-relay.legitimate-sender.com (mail-relay.legitimate-sender.com. [203.0.113.50])
+        by mx.google.com with ESMTPS id x123456789abc.1.2024.05.07.14.23.44
+        for <victim@example.com>;
+        Tue, 07 May 2024 14:23:44 -0700 (PDT)
+Received: from internal.legitimate-sender.com (internal.legitimate-sender.com [10.0.0.25])
+        by mail-relay.legitimate-sender.com (Postfix) with ESMTP id 4RxYz12345;
+        Tue, 07 May 2024 17:23:42 -0400 (EDT)
+Received: from unknown (unknown [185.234.72.15])
+        by internal.legitimate-sender.com (Postfix) with ESMTP id AaBbCcDdEe;
+        Tue, 07 May 2024 17:23:30 -0400 (EDT)
+X-Originating-IP: [185.234.72.15]
+Return-Path: <bounces@marketing-automation.com>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=legitimate-sender.com;
+        s=selector1; h=from:to:subject:date:message-id;
+        bh=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUV=;
+        b=abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567abc890def123
+X-Forefront-AntiSpam-Report: CIP:185.234.72.15;CTRY:RU;LANG:en;SCL:5;SRV:19;IPV:CAL;SFV:SPM;H:1;PTR:185-234-72-15.suspicious-host.ru;CAT:SPOOF;DIR:INB;SFS:(20200528001)(20200609001)(20200309001);
+X-Microsoft-Antispam: BCL:7;PCL:6;EFV:SPM;
+From: "Newsletter Service" <newsletter@legitimate-sender.com>
+To: victim@example.com
+Subject: Important Update - Your Account Requires Action
+Date: Tue, 07 May 2024 17:23:25 -0400
+Message-ID: <abc123@legitimate-sender.com>
+Reply-To: support@legitimate-sender.com
+MIME-Version: 1.0
+Content-Type: text/html; charset="UTF-8"
+X-Mailer: Microsoft Outlook 16.0`;
+
+            let isDarkMode = true;
+            let currentLang = localStorage.getItem('lang') || 'es';
+            const translations = {
+                es: {
+                    appTitle: 'Analizador de Cabeceras de Correo', themeTitle: 'Cambiar tema', editHeaders: 'Editar cabeceras', reanalyze: 'Reanalizar', copyReport: 'Copiar reporte', copied: 'Copiado', exportPdf: 'Exportar PDF', clear: 'Limpiar', rawHeaders: 'Cabeceras crudas del correo', placeholder: 'Pega aqui las cabeceras crudas del correo...', analyze: 'Analizar', loadSample: 'Cargar ejemplo', shortcut: 'Pulsa Ctrl+Enter para analizar', emptyState: 'Pega cabeceras de correo y pulsa Analizar', alertReport: 'Reporte', risk: 'RIESGO', securityFindings: 'Hallazgos de Seguridad', authentication: 'Autenticacion', details: 'Detalles', deliveryRoute: 'Ruta de Entrega', alerts: 'Alertas'
+                },
+                en: {
+                    appTitle: 'Email Header Analyzer', themeTitle: 'Toggle theme', editHeaders: 'Edit Headers', reanalyze: 'Re-analyze', copyReport: 'Copy Report', copied: 'Copied', exportPdf: 'Export PDF', clear: 'Clear', rawHeaders: 'Raw Email Headers', placeholder: 'Paste raw email headers here...', analyze: 'Analyze', loadSample: 'Load Sample', shortcut: 'Press Ctrl+Enter to analyze', emptyState: 'Paste email headers and click Analyze', alertReport: 'Report', risk: 'RISK', securityFindings: 'Security Findings', authentication: 'Authentication', details: 'Details', deliveryRoute: 'Delivery Route', alerts: 'Alerts'
+                }
+            };
+            const phraseTranslations = {
+                es: {
+                    'Risk Score': 'Puntuacion de Riesgo', 'LOW RISK': 'RIESGO BAJO', 'MEDIUM RISK': 'RIESGO MEDIO', 'HIGH RISK': 'RIESGO ALTO', 'Security Findings': 'Hallazgos de Seguridad', 'Passed': 'Correcto', 'Failed': 'Fallido', 'Not checked': 'No verificado', 'Authentication': 'Autenticacion', 'Result': 'Resultado', 'Client IP': 'IP cliente', 'Envelope From': 'Envelope From', 'Domain': 'Dominio', 'HELO/EHLO': 'HELO/EHLO', 'Evidence': 'Evidencia', 'Indicator': 'Indicador', 'Algorithm': 'Algoritmo', 'Selector (s=)': 'Selector (s=)', 'Action': 'Accion', 'Header From': 'Header From', 'Envelope Analysis': 'Analisis de Envelope', 'Delivery Route': 'Ruta de Entrega', 'Other Headers': 'Otras Cabeceras', 'Copy Report': 'Copiar reporte', 'Export PDF': 'Exportar PDF', 'Field': 'Campo', 'Value': 'Valor', 'Description': 'Descripcion', 'Evaluation': 'Evaluacion', 'ALERT': 'ALERTA', 'SECURITY ALERT': 'ALERTA DE SEGURIDAD', 'Prioritized summary of relevant findings': 'Resumen priorizado de hallazgos relevantes', 'HIGH': 'ALTO', 'MEDIUM': 'MEDIO', 'LOW': 'BAJO', 'INFO': 'INFO', 'OK': 'OK', 'Delay': 'Demora', 'Protocol': 'Protocolo', 'Time': 'Hora', 'For': 'Para', 'Unknown': 'Desconocido', 'From': 'De', 'To': 'Para', 'Subject': 'Asunto', 'Date': 'Fecha', 'Hops': 'Saltos', 'Bulk Complaint Level: higher value means more complaints and bulk/unwanted mail likelihood': 'Bulk Complaint Level: valor superior indica mayor probabilidad de quejas y correo masivo/no deseado', 'Phishing Confidence Level: phishing confidence diagnostic indicator': 'Phishing Confidence Level: indicador diagnostico de confianza de phishing', 'Enhanced Filtering Verdict: enhanced filtering diagnostic verdict': 'Enhanced Filtering Verdict: veredicto diagnostico de filtrado mejorado'
+                },
+                en: {
+                    'Puntuacion de Riesgo': 'Risk Score', 'RIESGO BAJO': 'LOW RISK', 'RIESGO MEDIO': 'MEDIUM RISK', 'RIESGO ALTO': 'HIGH RISK', 'Hallazgos de Seguridad': 'Security Findings', 'Correcto': 'Passed', 'Fallido': 'Failed', 'No verificado': 'Not checked', 'Autenticacion': 'Authentication', 'Resultado': 'Result', 'IP cliente': 'Client IP', 'Dominio': 'Domain', 'Evidencia': 'Evidence', 'Indicador': 'Indicator', 'Algoritmo': 'Algorithm', 'Accion': 'Action', 'Analisis de Envelope': 'Envelope Analysis', 'Ruta de Entrega': 'Delivery Route', 'Otras Cabeceras': 'Other Headers', 'Copiar reporte': 'Copy Report', 'Exportar PDF': 'Export PDF', 'Campo': 'Field', 'Valor': 'Value', 'Descripcion': 'Description', 'Evaluacion': 'Evaluation', 'ALERTA': 'ALERT', 'ALERTA DE SEGURIDAD': 'SECURITY ALERT', 'Resumen priorizado de hallazgos relevantes': 'Prioritized summary of relevant findings', 'ALTO': 'HIGH', 'MEDIO': 'MEDIUM', 'BAJO': 'LOW', 'Demora': 'Delay', 'Protocolo': 'Protocol', 'Hora': 'Time', 'Para': 'For', 'De': 'From', 'Asunto': 'Subject', 'Fecha': 'Date', 'Saltos': 'Hops', 'Desconocido': 'Unknown', 'El servidor emisor esta autorizado segun el registro SPF del dominio': 'The sending server is authorized by the domain SPF record', 'El servidor emisor NO esta autorizado - el dominio tiene directiva -all (rechazar)': 'The sending server is not authorized; the domain uses -all', 'La firma DKIM es valida y el mensaje no ha sido modificado': 'The DKIM signature is valid and the message was not modified', 'El mensaje no tiene firma DKIM o el dominio no tiene configurado DKIM': 'The message has no DKIM signature or DKIM is not configured', 'El mensaje cumple con la politica DMARC del dominio': 'The message complies with the domain DMARC policy', 'El dominio no tiene registro DMARC publicado': 'The domain has no published DMARC record', 'Remitente P1 / sobre usado para NDR y SPF': 'P1 sender / envelope used for NDR and SPF', 'Dominio asociado a la firma DKIM': 'Domain associated with the DKIM signature', 'Codigo de motivo no documentado': 'Undocumented reason code', 'IP que envio el mensaje': 'IP that sent the message', 'Dominio usado en la verificacion SPF': 'Domain used in the SPF check', 'Dominio que publico el registro SPF': 'Domain that published the SPF record', 'Servidor que se identifico en la conexion SMTP': 'Server identified during the SMTP connection', 'Dominio Envelope diferente al From': 'Envelope domain differs from From', 'Dominio MAIL FROM diferente al From': 'MAIL FROM domain differs from From', 'Amenaza detectada': 'Threat detected', 'correo masivo/no deseado': 'bulk/unwanted mail', 'posible phishing': 'possible phishing'
+                }
+            };
+            function t(key) { return translations[currentLang][key] || translations.en[key] || key; }
+            function applyStaticTranslations() {
+                document.documentElement.lang = currentLang;
+                document.title = t('appTitle');
+                document.getElementById('appTitle').textContent = t('appTitle');
+                document.getElementById('themeToggle').title = t('themeTitle');
+                document.getElementById('editHeadersBtn').textContent = t('editHeaders');
+                document.getElementById('reanalyzeBtn').textContent = t('reanalyze');
+                document.getElementById('topCopyBtn').textContent = t('copyReport');
+                document.getElementById('topPdfBtn').textContent = t('exportPdf');
+                document.getElementById('reportClearBtn').textContent = t('clear');
+                document.querySelector('label[for="headersInput"]').textContent = t('rawHeaders');
+                document.getElementById('headersInput').placeholder = t('placeholder');
+                document.getElementById('analyzeBtn').textContent = t('analyze');
+                document.getElementById('clearBtn').textContent = t('clear');
+                document.getElementById('loadSampleBtn').textContent = t('loadSample');
+                document.querySelector('.shortcut-hint').textContent = t('shortcut');
+                document.querySelector('#emptyState p').textContent = t('emptyState');
+                document.getElementById('langEsBtn').classList.toggle('active', currentLang === 'es');
+                document.getElementById('langEnBtn').classList.toggle('active', currentLang === 'en');
+            }
+            function translateTextValue(text) {
+                if (!text || !text.trim()) return text;
+                const leading = text.match(/^\s*/)[0];
+                const trailing = text.match(/\s*$/)[0];
+                let core = text.trim();
+                if (core.indexOf('X-Forefront-Antispam-Report') === 0) return leading + 'X-Forefront-Antispam-Report' + trailing;
+                const map = phraseTranslations[currentLang] || {};
+                if (core === 'Empty') return leading + 'Empty' + trailing;
+                if (map[core]) return leading + map[core] + trailing;
+                core = core.replace(/Risk Score/g, currentLang === 'es' ? 'Puntuacion de Riesgo' : 'Risk Score');
+                core = core.replace(/Puntuacion de Riesgo/g, currentLang === 'en' ? 'Risk Score' : 'Puntuacion de Riesgo');
+                core = core.replace(/LOW RISK|RIESGO BAJO/g, currentLang === 'es' ? 'RIESGO BAJO' : 'LOW RISK');
+                core = core.replace(/MEDIUM RISK|RIESGO MEDIO/g, currentLang === 'es' ? 'RIESGO MEDIO' : 'MEDIUM RISK');
+                core = core.replace(/HIGH RISK|RIESGO ALTO/g, currentLang === 'es' ? 'RIESGO ALTO' : 'HIGH RISK');
+                core = core.replace(/Passed|Correcto/g, currentLang === 'es' ? 'Correcto' : 'Passed');
+                core = core.replace(/Failed|Fallido/g, currentLang === 'es' ? 'Fallido' : 'Failed');
+                core = core.replace(/Not checked|No verificado/g, currentLang === 'es' ? 'No verificado' : 'Not checked');
+                core = core.replace(/Domain mismatch/g, currentLang === 'es' ? 'Diferencia de dominio' : 'Domain mismatch');
+                core = core.replace(/Diferencia de dominio/g, currentLang === 'en' ? 'Domain mismatch' : 'Diferencia de dominio');
+                core = core.replace(/Hop delay/g, currentLang === 'es' ? 'Demora entre saltos' : 'Hop delay');
+                core = core.replace(/Demora entre saltos/g, currentLang === 'en' ? 'Hop delay' : 'Demora entre saltos');
+                core = core.replace(/Received route anomalies/g, currentLang === 'es' ? 'Anomalias en ruta Received' : 'Received route anomalies');
+                core = core.replace(/Anomalias en ruta Received/g, currentLang === 'en' ? 'Received route anomalies' : 'Anomalias en ruta Received');
+                core = core.replace(/Evidencia:/g, currentLang === 'es' ? 'Evidencia:' : 'Evidence:');
+                core = core.replace(/Evidence:/g, currentLang === 'es' ? 'Evidencia:' : 'Evidence:');
+                core = core.replace(/Delivery Route \((\d+) hops\)|Ruta de Entrega \((\d+) saltos\)/g, function(_, enCount, esCount) { const count = enCount || esCount; return currentLang === 'es' ? 'Ruta de Entrega (' + count + ' saltos)' : 'Delivery Route (' + count + ' hops)'; });
+                core = core.replace(/Other Headers \((\d+)\)|Otras Cabeceras \((\d+)\)/g, function(_, enCount, esCount) { return (currentLang === 'es' ? 'Otras Cabeceras' : 'Other Headers') + ' (' + (enCount || esCount) + ')'; });
+                core = core.replace(/Resumen priorizado de hallazgos relevantes|Prioritized summary of relevant findings/g, currentLang === 'es' ? 'Resumen priorizado de hallazgos relevantes' : 'Prioritized summary of relevant findings');
+                return leading + core + trailing;
+            }
+            function localizeReportText(root) {
+                const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+                const nodes = [];
+                while (walker.nextNode()) nodes.push(walker.currentNode);
+                nodes.forEach(function(node) { node.nodeValue = translateTextValue(node.nodeValue); });
+            }
+            function setLanguage(lang) {
+                currentLang = lang;
+                localStorage.setItem('lang', currentLang);
+                applyStaticTranslations();
+                if (document.body.classList.contains('report-mode') && document.getElementById('headersInput').value.trim()) analyzeHeaders();
+            }
+            document.getElementById('langEsBtn').addEventListener('click', function() { setLanguage('es'); });
+            document.getElementById('langEnBtn').addEventListener('click', function() { setLanguage('en'); });
+            applyStaticTranslations();
+            document.getElementById('themeToggle').addEventListener('click', function() {
+                isDarkMode = !isDarkMode;
+                document.body.classList.toggle('light', !isDarkMode);
+                localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            });
+            if (localStorage.getItem('theme') === 'light') {
+                isDarkMode = false;
+                document.body.classList.add('light');
+            }
+            document.getElementById('analyzeBtn').addEventListener('click', function() { analyzeHeaders(); });
+            document.getElementById('clearBtn').addEventListener('click', function() {
+                document.getElementById('headersInput').value = '';
+                document.getElementById('reportContainer').innerHTML = '';
+                document.getElementById('emptyState').classList.remove('hidden');
+                document.body.classList.remove('report-mode', 'input-open');
+            });
+            document.getElementById('editHeadersBtn').addEventListener('click', function() { document.body.classList.add('input-open'); });
+            document.getElementById('drawerBackdrop').addEventListener('click', function() { document.body.classList.remove('input-open'); });
+            document.getElementById('reanalyzeBtn').addEventListener('click', function() { analyzeHeaders(); });
+            document.getElementById('topCopyBtn').addEventListener('click', function() { if (window.copyReport) window.copyReport(); });
+            document.getElementById('topPdfBtn').addEventListener('click', function() { if (window.generatePdfReport) window.generatePdfReport(); });
+            document.getElementById('reportClearBtn').addEventListener('click', function() {
+                document.getElementById('headersInput').value = '';
+                document.getElementById('reportContainer').innerHTML = '';
+                document.getElementById('emptyState').classList.remove('hidden');
+                document.body.classList.remove('report-mode', 'input-open');
+            });
+            document.getElementById('loadSampleBtn').addEventListener('click', function() {
+                document.getElementById('headersInput').value = sampleHeaders;
+                analyzeHeaders();
+            });
+            document.getElementById('headersInput').addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') { analyzeHeaders(); }
+            });
+
+            function unfoldHeaders(raw) { return raw.replace(/\r\n[ \t]+/g, ' ').replace(/\n[ \t]+/g, ' '); }
+            function parseHeaders(raw) {
+                const unfolded = unfoldHeaders(raw);
+                const lines = unfolded.split(/\r?\n/);
+                const headers = [];
+                let currentKey = ''; let currentValue = '';
+                for (const line of lines) {
+                    if (line.match(/^[ \t]/) && currentKey) { currentValue += ' ' + line.trim(); }
+                    else if (line.includes(':')) {
+                        if (currentKey) { headers.push({ key: currentKey.toLowerCase(), value: currentValue.trim() }); }
+                        const colonIndex = line.indexOf(':');
+                        currentKey = line.substring(0, colonIndex).trim();
+                        currentValue = line.substring(colonIndex + 1).trim();
+                    }
+                }
+                if (currentKey) { headers.push({ key: currentKey.toLowerCase(), value: currentValue.trim() }); }
+                return headers;
+            }
+            function getHeader(headers, key) { const found = headers.find(h => h.key === key.toLowerCase()); return found ? found.value : null; }
+            function getAllHeaders(headers, key) { return headers.filter(h => h.key === key.toLowerCase()).map(h => h.value); }
+            function getFirstHeaderByPrefix(headers, prefix) { const found = headers.find(h => h.key.startsWith(prefix.toLowerCase())); return found ? found.value : null; }
+            function parseAuthResults(value) {
+                const result = { spf: 'none', dkim: 'none', dmarc: 'none', compauth: 'none', reason: null, action: null, headerFrom: null, smtpMailFrom: null, headerD: null };
+                if (!value) return result;
+                const parts = value.split(';').map(p => p.trim());
+                for (const part of parts) {
+                    if (part.startsWith('spf=')) { const m = part.match(/spf=(\w+)/); if (m) result.spf = m[1].toLowerCase(); }
+                    if (part.startsWith('dkim=')) { const m = part.match(/dkim=(\w+)/); if (m) result.dkim = m[1].toLowerCase(); }
+                    if (part.startsWith('dmarc=')) { const m = part.match(/dmarc=(\w+)/); if (m) result.dmarc = m[1].toLowerCase(); }
+                    if (part.startsWith('compauth=')) { const m = part.match(/compauth=(\w+)/); if (m) result.compauth = m[1].toLowerCase(); }
+                    const reasonM = part.match(/reason=(\d{3})/); if (reasonM) result.reason = reasonM[1];
+                    const actionM = part.match(/action=([^\s;]+)/); if (actionM) result.action = actionM[1];
+                    const headerFromM = part.match(/header\.from=([^\s;]+)/); if (headerFromM) result.headerFrom = headerFromM[1];
+                    const smtpMailFromM = part.match(/smtp\.mailfrom=([^\s;]+)/); if (smtpMailFromM) result.smtpMailFrom = smtpMailFromM[1];
+                    const headerDM = part.match(/header\.(?:d|i)=@?([^\s;]+)/); if (headerDM) result.headerD = headerDM[1];
+                }
+                return result;
+            }
+            function parseSPF(value) {
+                if (!value) return null;
+                const result = { raw: value };
+                const m = value.match(/(\w+)/); if (m) result.result = m[1];
+                const ipM = value.match(/client-ip=([0-9.]+)/); if (ipM) result.clientIp = ipM[1];
+                const envM = value.match(/envelope-from=([^\s;]+)/); if (envM) result.envelopeFrom = envM[1];
+                const heloM = value.match(/helo=([^\s;]+)/); if (heloM) result.helo = heloM[1];
+                const domM = value.match(/domain=([^\s;]+)/); if (domM) result.domain = domM[1];
+                return result;
+            }
+            function parseDKIM(value) {
+                if (!value) return null;
+                const result = { raw: value };
+                const vM = value.match(/v=(\d+)/); if (vM) result.version = vM[1];
+                const aM = value.match(/a=([^\s;]+)/); if (aM) result.algorithm = aM[1];
+                const dM = value.match(/d=([^\s;]+)/); if (dM) result.domain = dM[1];
+                const sM = value.match(/s=([^\s;]+)/); if (sM) result.selector = sM[1];
+                const hM = value.match(/h=([^\s;]+)/); if (hM) result.signedHeaders = hM[1];
+                return result;
+            }
+            function parseDMARC(value) {
+                if (!value) return null;
+                const result = { raw: value };
+                const rM = value.match(/dmarc=(\w+)/); if (rM) result.result = rM[1];
+                const pM = value.match(/p=(\w+)/); if (pM) result.result = pM[1];
+                const aM = value.match(/action=([^\s;]+)/); if (aM) result.action = aM[1];
+                const fM = value.match(/header\.from=([^\s;]+)/); if (fM) result.headerFrom = fM[1];
+                return result;
+            }
+            function parseReceived(value) {
+                const result = { raw: value, alerts: [] };
+                const fromM = value.match(/from\s+([^\s(]+)/i); if (fromM) result.from = fromM[1].replace(/[\[\]]/g, '');
+                const byM = value.match(/by\s+([^\s(]+)/i); if (byM) result.by = byM[1].replace(/[\[\]]/g, '');
+                const withM = value.match(/with\s+([^\s;]+)/i); if (withM) result.with = withM[1];
+                const forM = value.match(/for\s+([^\s;]+)/i); if (forM) result.for = forM[1];
+                const ipM = value.match(/\[([0-9a-f:.]+)\]/i); if (ipM) result.ip = ipM[1];
+                const timeM = value.match(/;\s*(.+)$/); if (timeM) result.timestamp = timeM[1].trim();
+                const mailM = value.match(/from\s+<([^>]+)>/i); if (mailM) result.mailFrom = mailM[1];
+                result.ipType = classifyIp(result.ip);
+                const combined = ((result.from || '') + ' ' + (result.by || '') + ' ' + value).toLowerCase();
+                if (combined.includes('unknown')) result.alerts.push('Servidor identificado como unknown');
+                if (['attacker', 'phish', 'spam', 'malware', 'suspicious'].some(k => combined.includes(k))) result.alerts.push('Nombre de servidor sospechoso');
+                if (/\.(ru|cn|tk)(\s|\)|\]|;|$)/i.test(combined)) result.alerts.push('TLD asociado a mayor riesgo contextual');
+                if (result.ipType === 'private') result.alerts.push('IP privada/interna detectada');
+                return result;
+            }
+            function classifyIp(ip) {
+                if (!ip) return 'unknown';
+                if (ip.includes(':')) return 'ipv6';
+                const parts = ip.split('.').map(Number);
+                if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return 'unknown';
+                if (parts[0] === 10 || parts[0] === 127) return 'private';
+                if (parts[0] === 192 && parts[1] === 168) return 'private';
+                if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return 'private';
+                if (parts[0] === 169 && parts[1] === 254) return 'private';
+                return 'public';
+            }
+            function parseKeyValueHeader(value, descriptions) {
+                if (!value) return [];
+                const fields = value.split(';').map(f => f.trim());
+                const result = [];
+                for (const field of fields) {
+                    if (!field) continue;
+                    const colonIdx = field.indexOf(':');
+                    const equalsIdx = field.indexOf('=');
+                    let eqIdx = colonIdx;
+                    if (eqIdx < 0 || (equalsIdx > 0 && equalsIdx < eqIdx)) eqIdx = equalsIdx;
+                    if (eqIdx > 0) {
+                        const key = field.substring(0, eqIdx).trim();
+                        const val = field.substring(eqIdx + 1).trim();
+                        result.push({ key: key, value: val, description: descriptions[key] || 'Campo de diagnóstico' });
+                    }
+                }
+                return result;
+            }
+            function parseAntiSpamReport(value) {
+                if (!value) return [];
+                const catDesc = { AMP: 'Antimalware', BIMP: 'Suplantación de marca', BULK: 'Correo masivo', DIMP: 'Suplantación de dominio', FTBP: 'Antimalware de datos adjuntos', GIMP: 'Suplantación de inteligencia de buzones', HPHSH: 'Suplantación de identidad de alta confianza', HSPM: 'Correo no deseado de alta confianza', INTOS: 'Phishing intra-organización', MALW: 'Malware', OSPM: 'Correo no deseado saliente', PHSH: 'Phishing', SAP: 'Datos adjuntos seguros', SPM: 'Correo no deseado', SPOOF: 'Suplantación electrónica', UIMP: 'Suplantación de usuario' };
+                const dirDesc = { INB: 'Entrante', OUT: 'Saliente', INT: 'Interno' };
+                const ipvDesc = { CAL: 'IP permitidas (omitido)', NLI: 'IP no en listas de reputación' };
+                const sfvDesc = { BLK: 'Bloqueado', NSPM: 'No spam', SFE: 'Lista segura', SKA: 'Lista permitidos', SKB: 'Spam - lista bloqueados', SKN: 'Marcado no spam', SKQ: 'Liberado cuarentena', SKS: 'Marcado spam', SPM: 'Spam detectado' };
+                const sclDesc = { '-1': 'Sin filtrar', '0': 'Seguro', '1': 'Spam muy bajo', '5': 'Spam medio', '6': 'Spam alto', '9': 'Spam muy alto' };
+                const sftyDesc = { '9.19': 'SUPLANTACIÓN DOMINIO', '9.20': 'SUPLANTACIÓN USUARIO', '9.25': 'PRIMER CONTACTO' };
+                const fields = value.split(';').map(f => f.trim());
+                const result = [];
+                for (const field of fields) {
+                    if (!field) continue;
+                    const eqIdx = field.indexOf(':');
+                    if (eqIdx > 0) {
+                        let key = field.substring(0, eqIdx).trim();
+                        let val = field.substring(eqIdx + 1).trim();
+                        let desc = '';
+                        if (key === 'CAT' && catDesc[val]) desc = catDesc[val];
+                        else if (key === 'DIR' && dirDesc[val]) desc = dirDesc[val];
+                        else if (key === 'IPV' && ipvDesc[val]) desc = ipvDesc[val];
+                        else if (key === 'SFV' && sfvDesc[val]) desc = sfvDesc[val];
+                        else if (key === 'SCL' && sclDesc[val]) desc = 'Nivel de confianza spam: ' + sclDesc[val];
+                        else if (key === 'SFTY' && sftyDesc[val]) desc = sftyDesc[val];
+                        else if (key === 'CIP') desc = 'Dirección IP de conexión';
+                        else if (key === 'CTRY') desc = 'País/región de origen';
+                        else if (key === 'LANG') desc = 'Idioma del mensaje';
+                        else if (key === 'PTR') desc = 'Registro PTR (búsqueda inversa DNS)';
+                        else if (key === 'H') desc = 'Cadena HELO/EHLO del servidor';
+                        else if (key === 'SRV' && val === 'BULK') desc = 'Correo masivo identificado por filtrado antispam y BCL';
+                        else if (key === 'SRV') desc = 'Regla/servicio de filtro aplicado';
+                        else if (key === 'SFS') desc = 'Coincidencias de firma';
+                        else if (key === 'BCL') desc = 'Nivel de queja de correo masivo';
+                        else desc = 'Campo de diagnóstico';
+                        result.push({ key: key, value: val, description: desc });
+                    }
+                }
+                return result;
+            }
+            function parseMicrosoftAntispam(value) {
+                return parseKeyValueHeader(value, {
+                    BCL: 'Bulk Complaint Level: un valor superior indica mayor probabilidad de quejas y correo masivo/no deseado',
+                    PCL: 'Phishing Confidence Level: indicador diagnóstico de confianza de phishing',
+                    EFV: 'Enhanced Filtering Verdict: veredicto diagnóstico de filtrado mejorado'
+                });
+            }
+            function extractEmail(value) {
+                if (!value) return null;
+                const emailMatch = String(value).match(/[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})/i);
+                if (!emailMatch) return null;
+                return emailMatch[0].replace(/[<>\[\](),;"']/g, '').toLowerCase();
+            }
+            function extractDomain(value) {
+                if (!value) return null;
+                const email = extractEmail(value);
+                if (email && email.indexOf('@') >= 0) return email.split('@').pop().toLowerCase();
+                const cleaned = String(value).trim().replace(/[<>\[\](),;"']/g, '').toLowerCase();
+                const domainMatch = cleaned.match(/(?:^|\s)([a-z0-9.-]+\.[a-z]{2,})(?:\s|$)/i);
+                return domainMatch ? domainMatch[1].toLowerCase() : null;
+            }
+            function calculateRisk(authResults, receivedHops, antiSpamData, microsoftAntispamData) {
+                let score = 0;
+                if (authResults.spf === 'none' || authResults.spf === 'neutral') score += 2;
+                else if (authResults.spf === 'fail' || authResults.spf === 'softfail') score += 3;
+                if (authResults.dkim === 'none' || authResults.dkim === 'neutral') score += 2;
+                else if (authResults.dkim === 'fail') score += 3;
+                if (authResults.dmarc === 'none' || authResults.dmarc === 'neutral') score += 2;
+                else if (authResults.dmarc === 'fail') score += 4;
+                if (authResults.compauth === 'fail') score += 3;
+                const suspicious = ['attacker', 'phish', 'spam', 'malware', 'suspicious', '.ru', '.cn'];
+                for (const hop of receivedHops) { if (suspicious.some(k => (hop.from || '').toLowerCase().includes(k))) { score += 3; break; } }
+                for (let i = 1; i < receivedHops.length; i++) { if (receivedHops[i].delay && receivedHops[i].delay > 300) score += 1; }
+                for (const f of antiSpamData || []) {
+                    if (f.key === 'CAT' && ['AMP','BIMP','DIMP','GIMP','HPHSH','HPHISH','HSPM','INTOS','MALW','PHSH','SAP','SPOOF','UIMP'].includes(f.value)) score += 3;
+                    if (f.key === 'SCL' && parseInt(f.value, 10) >= 6) score += 2;
+                    if (f.key === 'SFV' && ['SPM','SKB','SKS','BLK'].includes(f.value)) score += 2;
+                    if (f.key === 'SFTY' && ['9.19','9.20'].includes(f.value)) score += 2;
+                }
+                for (const f of microsoftAntispamData || []) {
+                    if (f.key === 'BCL' && parseInt(f.value, 10) >= 7) score += 2;
+                    if (f.key === 'PCL' && parseInt(f.value, 10) >= 7) score += 2;
+                }
+                return score > 15 ? 15 : score;
+            }
+            function getRiskLevel(score) { if (score <= 2) return 'low'; if (score <= 5) return 'medium'; return 'high'; }
+            function parseTimestamp(ts) {
+                try { const d = new Date(ts); if (!isNaN(d.getTime())) return d; const p = ts.match(/(\d{1,2})\s+(\w{3})\s+(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})/); if (p) { const m = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 }; return new Date(p[3], m[p[2]], p[1], p[4], p[5], p[6]); } } catch(e) {}
+                return null;
+            }
+
+            function analyzeHeaders() {
+                const raw = document.getElementById('headersInput').value.trim();
+                if (!raw) return;
+                document.body.classList.add('report-mode');
+                document.body.classList.remove('input-open');
+                document.getElementById('emptyState').classList.add('hidden');
+                const headers = parseHeaders(raw);
+
+                const from = getHeader(headers, 'from');
+                const to = getHeader(headers, 'to');
+                const subject = getHeader(headers, 'subject');
+                const date = getHeader(headers, 'date');
+                const messageId = getHeader(headers, 'message-id');
+                const replyTo = getHeader(headers, 'reply-to');
+                const returnPath = getHeader(headers, 'return-path');
+                const envelopeHeader = getHeader(headers, 'envelope') || getHeader(headers, 'envelope-from') || getHeader(headers, 'x-envelope-from');
+                const xOriginatingIP = getHeader(headers, 'x-originating-ip');
+                const xMailer = getHeader(headers, 'x-mailer') || getHeader(headers, 'user-agent');
+
+                const authResultsRaw = getHeader(headers, 'authentication-results');
+                const authResults = parseAuthResults(authResultsRaw);
+                const spfRaw = getHeader(headers, 'received-spf');
+                const spfData = parseSPF(spfRaw);
+                const dkimRaw = getHeader(headers, 'dkim-signature');
+                const dkimData = parseDKIM(dkimRaw);
+                const dmarcRaw = getHeader(headers, 'dmarc');
+                const dmarcData = parseDMARC(dmarcRaw || authResultsRaw);
+
+                const receivedAll = getAllHeaders(headers, 'received');
+                const receivedHops = receivedAll.map(parseReceived).reverse();
+                for (let i = 1; i < receivedHops.length; i++) {
+                    const prev = parseTimestamp(receivedHops[i - 1].timestamp);
+                    const curr = parseTimestamp(receivedHops[i].timestamp);
+                    if (prev && curr) {
+                        const diff = (curr - prev) / 1000;
+                        if (diff >= 0) receivedHops[i].delay = Math.round(diff);
+                        else receivedHops[i].alerts.push('Timestamp anterior al salto previo (' + Math.round(diff) + 's)');
+                    }
+                    if (receivedHops[i - 1].by && receivedHops[i].from && receivedHops[i - 1].by !== receivedHops[i].from) {
+                        receivedHops[i].alerts.push('Posible discontinuidad: by anterior no coincide con from actual');
+                    }
+                }
+
+                const antiSpamRaw = getFirstHeaderByPrefix(headers, 'x-forefront-antispam-report');
+                const antiSpamData = parseAntiSpamReport(antiSpamRaw);
+                const microsoftAntispamRaw = getHeader(headers, 'x-microsoft-antispam');
+                const microsoftAntispamData = parseMicrosoftAntispam(microsoftAntispamRaw);
+                const parsedHeaderKeys = ['delivered-to', 'received', 'authentication-results', 'received-spf', 'dkim-signature', 'dmarc', 'x-originating-ip', 'x-microsoft-antispam', 'from', 'to', 'subject', 'date', 'message-id', 'reply-to', 'return-path', 'mime-version', 'content-type', 'x-mailer', 'user-agent', 'envelope', 'envelope-from', 'x-envelope-from', 'arc-authentication-results', 'arc-seal', 'arc-message-signature', 'list-unsubscribe'];
+                const otherHeaders = headers.filter(h => !parsedHeaderKeys.includes(h.key) && !h.key.startsWith('x-forefront-antispam-report'));
+
+                const score = calculateRisk(authResults, receivedHops, antiSpamData, microsoftAntispamData);
+                const riskLevel = getRiskLevel(score);
+                const findings = [];
+
+                findings.push({ type: authResults.spf === 'pass' ? 'ok' : (authResults.spf === 'none' ? 'info' : 'fail'), indicator: 'SPF', result: authResults.spf, text: 'SPF: ' + (authResults.spf === 'pass' ? 'Passed' : (authResults.spf === 'none' ? 'Not checked' : 'Failed')), evidence: spfRaw || authResultsRaw || 'Empty' });
+                findings.push({ type: authResults.dkim === 'pass' ? 'ok' : (authResults.dkim === 'none' ? 'info' : 'fail'), indicator: 'DKIM', result: authResults.dkim, text: 'DKIM: ' + (authResults.dkim === 'pass' ? 'Passed' : (authResults.dkim === 'none' ? 'Not checked' : 'Failed')), evidence: dkimRaw || authResultsRaw || 'Empty' });
+                findings.push({ type: authResults.dmarc === 'pass' ? 'ok' : (authResults.dmarc === 'none' ? 'info' : 'fail'), indicator: 'DMARC', result: authResults.dmarc, text: 'DMARC: ' + (authResults.dmarc === 'pass' ? 'Passed' : (authResults.dmarc === 'none' ? 'Not checked' : 'Failed')), evidence: authResultsRaw || 'Empty' });
+
+                const headerFromDomain = extractDomain(from);
+                const headerFromAddress = extractEmail(from);
+                const envelopeFromDomain = extractDomain(returnPath || spfData?.envelopeFrom);
+                const firstHopMailFrom = receivedHops[0]?.mailFrom || spfData?.envelopeFrom;
+                const mailFromDomain = extractDomain(firstHopMailFrom);
+                const envelopeHeaderDomain = extractDomain(envelopeHeader);
+                const envelopeHeaderAddress = extractEmail(envelopeHeader);
+                const envelopeComparisonEvidence = 'Header From: ' + (headerFromAddress || headerFromDomain || 'Empty') + ' | Envelope: ' + (envelopeHeaderAddress || envelopeHeaderDomain || 'Empty') + ' | Raw Envelope: ' + (envelopeHeader || 'Empty');
+                const envelopeMismatch = !!envelopeHeader && !!(headerFromAddress || headerFromDomain) && !!(envelopeHeaderAddress || envelopeHeaderDomain) && ((headerFromAddress && envelopeHeaderAddress && headerFromAddress !== envelopeHeaderAddress) || (!headerFromAddress || !envelopeHeaderAddress) && headerFromDomain && envelopeHeaderDomain && headerFromDomain !== envelopeHeaderDomain);
+
+                if (envelopeMismatch) { findings.push({ type: 'warn', indicator: 'Envelope', result: 'mismatch', text: 'Domain mismatch: Header From (' + (headerFromAddress || headerFromDomain) + ') vs Envelope (' + (envelopeHeaderAddress || envelopeHeaderDomain) + ')', evidence: envelopeComparisonEvidence }); }
+                if (headerFromDomain && envelopeFromDomain && headerFromDomain !== envelopeFromDomain) { findings.push({ type: 'warn', indicator: 'Return-Path', result: 'mismatch', text: 'Domain mismatch: Header From (' + headerFromDomain + ') vs Return-Path (' + envelopeFromDomain + ')', evidence: 'Header From: ' + headerFromDomain + ' | Return-Path: ' + envelopeFromDomain }); }
+                if (headerFromDomain && mailFromDomain && headerFromDomain !== mailFromDomain) { findings.push({ type: 'warn', indicator: 'MAIL FROM', result: 'mismatch', text: 'Domain mismatch: Header From (' + headerFromDomain + ') vs MAIL FROM (' + mailFromDomain + ')', evidence: 'Header From: ' + headerFromDomain + ' | MAIL FROM: ' + mailFromDomain }); }
+                if (xOriginatingIP) { const relayIP = receivedHops[0]?.ip; if (relayIP && relayIP !== xOriginatingIP.replace(/[\[\]]/g, '')) { findings.push({ type: 'info', indicator: 'X-Originating-IP', result: 'differs', text: 'X-Originating-IP differs from first relay IP', evidence: 'X-Originating-IP: ' + xOriginatingIP + ' | First relay IP: ' + relayIP }); } }
+                for (const hop of receivedHops) { if (['attacker', 'phish', 'spam', 'malware', 'suspicious', '.ru'].some(k => (hop.from || '').toLowerCase().includes(k))) { findings.push({ type: 'fail', indicator: 'Received', result: 'suspicious', text: 'Suspicious server: ' + hop.from, evidence: hop.raw || 'Empty' }); break; } }
+                for (let i = 1; i < receivedHops.length; i++) { if (receivedHops[i].delay && receivedHops[i].delay > 120) { findings.push({ type: 'warn', indicator: 'Received', result: 'delay', text: 'Hop delay: ' + receivedHops[i].delay + 's', evidence: receivedHops[i].raw || 'Empty' }); } }
+                const hopAlertCount = receivedHops.reduce((total, hop) => total + ((hop.alerts || []).length), 0);
+                if (hopAlertCount > 0) findings.push({ type: 'warn', indicator: 'Received', result: 'anomaly', text: 'Received route anomalies: ' + hopAlertCount, evidence: receivedHops.filter(hop => hop.alerts && hop.alerts.length).map(hop => hop.alerts.join(' | ')).join(' || ') || 'Empty' });
+
+                const container = document.getElementById('reportContainer');
+                container.innerHTML = '';
+                const riskText = riskLevel === 'low' ? 'LOW RISK' : (riskLevel === 'medium' ? 'MEDIUM RISK' : 'HIGH RISK');
+                container.innerHTML += '<div class="card"><div class="card-body"><div class="risk-banner risk-' + riskLevel + '">Risk Score: ' + score + '/15 - ' + riskText + '</div><div class="summary-grid">' + '<div class="summary-item"><div class="summary-label">From</div><div class="summary-value">' + escapeHtml(from || 'N/A') + '</div></div>' + '<div class="summary-item"><div class="summary-label">To</div><div class="summary-value">' + escapeHtml(to || 'N/A') + '</div></div>' + '<div class="summary-item"><div class="summary-label">Subject</div><div class="summary-value">' + escapeHtml(subject || 'N/A') + '</div></div>' + '<div class="summary-item"><div class="summary-label">Date</div><div class="summary-value">' + escapeHtml(date || 'N/A') + '</div></div>' + '<div class="summary-item"><div class="summary-label">SPF</div><div class="summary-value"><span class="badge badge-' + getBadgeClass(authResults.spf) + '">' + authResults.spf + '</span></div></div>' + '<div class="summary-item"><div class="summary-label">DKIM</div><div class="summary-value"><span class="badge badge-' + getBadgeClass(authResults.dkim) + '">' + authResults.dkim + '</span></div></div>' + '<div class="summary-item"><div class="summary-label">DMARC</div><div class="summary-value"><span class="badge badge-' + getBadgeClass(authResults.dmarc) + '">' + authResults.dmarc + '</span></div></div>' + '<div class="summary-item"><div class="summary-label">Hops</div><div class="summary-value">' + receivedHops.length + '</div></div>' + '</div></div></div>';
+
+                var findingsHtml = '<table class="analysis-table"><thead><tr><th>Indicador</th><th>Resultado</th><th>Descripcion</th><th>Evidencia</th></tr></thead><tbody>';
+                for (var fi = 0; fi < findings.length; fi++) {
+                    var findingBadge = findings[fi].type === 'ok' ? 'pass' : (findings[fi].type === 'fail' ? 'fail' : (findings[fi].type === 'warn' ? 'warn' : 'info'));
+                    findingsHtml += '<tr><td>' + escapeHtml(findings[fi].indicator || 'General') + '</td><td><span class="badge badge-' + findingBadge + '">' + escapeHtml(findings[fi].result || findings[fi].type) + '</span></td><td>' + escapeHtml(findings[fi].text) + '</td><td class="analysis-evidence">' + escapeHtml(findings[fi].evidence || 'Empty') + '</td></tr>';
+                }
+                findingsHtml += '</tbody></table>';
+                container.innerHTML += '<div class="card"><div class="card-header"><div class="card-icon default">' + (currentLang === 'es' ? 'H' : 'S') + '</div><div class="card-title">Security Findings</div></div><div class="card-body table-card-body">' + findingsHtml + '</div></div>';
+
+                var spfDesc = { pass: 'El servidor emisor esta autorizado segun el registro SPF del dominio', fail: 'El servidor emisor NO esta autorizado - el dominio tiene directiva -all (rechazar)', softfail: 'El servidor no esta autorizado pero el dominio usa ~all (aceptar con caution)', neutral: 'El dominio no indica si el servidor esta autorizado (?all)', none: 'No hay registro SPF publicado o no se pudo evaluar', temperror: 'Error temporal al consultar DNS - puede funcionar mas adelante', permerror: 'Error permanente - el registro SPF tiene formato invalido' };
+                var dkimDesc = { pass: 'La firma DKIM es valida y el mensaje no ha sido modificado', fail: 'La firma DKIM no es valida - puede ser por mensaje modificado o clave incorrecta', none: 'El mensaje no tiene firma DKIM o el dominio no tiene configurado DKIM' };
+                var dmarcDesc = { pass: 'El mensaje cumple con la politica DMARC del dominio', fail: 'El mensaje no cumple con DMARC - verifica alineacion SPF/DKIM', bestguesspass: 'Pasaria si el dominio tuviera registro DMARC', none: 'El dominio no tiene registro DMARC publicado' };
+                var compauthReason = { '000': 'compauth=fail: fallo de autenticacion explicita; DMARC fallo con politica quarantine/reject', '001': 'compauth=fail: autenticacion implicita fallida; sin registros o politicas debiles (SPF ~all/?all o DMARC p=none)', '002': 'Par remitente/dominio explicitamente prohibido por politica', '010': 'DMARC fallo con dominio aceptado por la organizacion (posible suplantacion interna)', '100': 'SPF o DKIM paso y MAIL FROM/From estan alineados', '101': 'DKIM firmado por el dominio usado en From', '102': 'MAIL FROM y From alineados y SPF paso', '103': 'From alineado con PTR DNS de la IP de origen', '104': 'PTR DNS alineado con dominio From', '108': 'DKIM fallo por modificacion atribuida a saltos legitimos', '109': 'Sin registro DMARC, pero el mensaje pasaria', '111': 'DMARC temporal/permanente fallido, pero SPF o DKIM alineado', '112': 'Timeout DNS al recuperar DMARC', '115': 'Enviado desde Microsoft 365 con dominio From aceptado', '116': 'MX del dominio From alineado con PTR de IP de conexion', '130': 'ARC confiable supero fallo DMARC', '201': 'PTR de From alineado con subred PTR de IP de conexion', '202': 'From alineado con dominio PTR de IP de conexion', '501': 'DMARC no aplicado: NDR valido con contacto previo', '502': 'DMARC no aplicado: NDR valido para mensaje enviado desde la organizacion', '601': 'Dominio aceptado en la organizacion (posible suplantacion interna)', '701': 'DMARC no aplicado por historial legitimo', '702': 'DMARC no aplicado por historial legitimo', '703': 'DMARC no aplicado por historial legitimo', '704': 'DMARC no aplicado por historial legitimo', '905': 'DMARC omitido por enrutamiento complejo' };
+                var compauthDesc = { pass: 'Mensaje autenticado correctamente (SPF/DKIM/DMARC alineados)', softpass: 'Autenticacion parcial - algunos mecanismos pasaron', fail: 'Autenticacion fallida - no paso las verificaciones de seguridad', none: 'No se realizo evaluacion de autenticacion compuesta' };
+                container.innerHTML += '<div class="card"><div class="card-header"><div class="card-icon info">A</div><div class="card-title">Authentication-Results</div></div><div class="card-body"><div class="field-row"><div class="field-key">SPF</div><div class="field-value"><span class="badge badge-' + getBadgeClass(authResults.spf) + '">' + authResults.spf + '</span> <span class="field-desc">' + (spfDesc[authResults.spf] || '') + '</span></div></div><div class="field-row"><div class="field-key">SMTP MAIL FROM</div><div class="field-value">' + emptyValue(authResults.smtpMailFrom) + ' <span class="field-desc">Remitente P1 / sobre usado para NDR y SPF</span></div></div><div class="field-row"><div class="field-key">DKIM</div><div class="field-value"><span class="badge badge-' + getBadgeClass(authResults.dkim) + '">' + authResults.dkim + '</span> <span class="field-desc">' + (dkimDesc[authResults.dkim] || '') + '</span></div></div><div class="field-row"><div class="field-key">DKIM header.d/i</div><div class="field-value">' + emptyValue(authResults.headerD) + ' <span class="field-desc">Dominio asociado a la firma DKIM</span></div></div><div class="field-row"><div class="field-key">DMARC</div><div class="field-value"><span class="badge badge-' + getBadgeClass(authResults.dmarc) + '">' + authResults.dmarc + '</span> <span class="field-desc">' + (dmarcDesc[authResults.dmarc] || '') + '</span></div></div><div class="field-row"><div class="field-key">CompAuth</div><div class="field-value"><span class="badge badge-' + getBadgeClass(authResults.compauth) + '">' + authResults.compauth + '</span> <span class="field-desc">' + (compauthDesc[authResults.compauth] || '') + '</span></div></div><div class="field-row"><div class="field-key">CompAuth Reason</div><div class="field-value">' + (authResults.reason ? escapeHtml(authResults.reason) + ' <span class="field-desc">' + escapeHtml(compauthReason[authResults.reason] || 'Codigo de motivo no documentado') + '</span>' : '<span class="field-desc">Empty</span>') + '</div></div><div class="field-row"><div class="field-key">DMARC Action</div><div class="field-value">' + emptyValue(authResults.action) + '</div></div><div class="field-row"><div class="field-key">Header From</div><div class="field-value">' + emptyValue(authResults.headerFrom) + ' <span class="field-desc">Remitente P2 visible para el usuario</span></div></div><div class="field-row" style="border-top:1px dashed var(--border);padding-top:0.75rem;margin-top:0.5rem"><div class="field-key">Evidencia</div><div class="field-value" style="font-size:0.6rem;color:var(--text-muted);word-break:break-all">' + emptyValue(authResultsRaw) + '</div></div></div></div>';
+
+                var spfResultDesc = { pass: 'La IP del servidor emisor esta autorizada en el registro SPF del dominio', fail: 'La IP del servidor NO esta autorizada - el dominio indica rechazar mensajes (-all)', softfail: 'La IP no esta autorizada pero el dominio acepta con advertencia (~all)', neutral: 'El dominio no confirma si la IP esta autorizada (?all)', none: 'El dominio no tiene registro SPF publicado', temperror: 'Error temporal al consultar DNS - reintentar puede ayudar', permerror: 'Error permanente - el registro SPF tiene formato incorrecto' };
+                container.innerHTML += '<div class="card"><div class="card-header"><div class="card-icon info">R</div><div class="card-title">Received-SPF</div></div><div class="card-body"><div class="field-row"><div class="field-key">Result</div><div class="field-value">' + (spfData && spfData.result ? '<span class="badge badge-' + getBadgeClass(spfData.result) + '">' + spfData.result + '</span> <span class="field-desc">' + (spfResultDesc[spfData.result] || '') + '</span>' : '<span class="field-desc">Empty</span>') + '</div></div><div class="field-row"><div class="field-key">Client IP</div><div class="field-value">' + (spfData && spfData.clientIp ? escapeHtml(spfData.clientIp) + ' <span class="field-desc">IP que envio el mensaje</span>' : '<span class="field-desc">Empty</span>') + '</div></div><div class="field-row"><div class="field-key">Envelope From</div><div class="field-value">' + (spfData && spfData.envelopeFrom ? escapeHtml(spfData.envelopeFrom) + ' <span class="field-desc">Dominio usado en la verificacion SPF</span>' : '<span class="field-desc">Empty</span>') + '</div></div><div class="field-row"><div class="field-key">Domain</div><div class="field-value">' + (spfData && spfData.domain ? escapeHtml(spfData.domain) + ' <span class="field-desc">Dominio que publico el registro SPF</span>' : '<span class="field-desc">Empty</span>') + '</div></div><div class="field-row"><div class="field-key">HELO/EHLO</div><div class="field-value">' + (spfData && spfData.helo ? escapeHtml(spfData.helo) + ' <span class="field-desc">Servidor que se identifico en la conexion SMTP</span>' : '<span class="field-desc">Empty</span>') + '</div></div><div class="field-row"><div class="field-key">Evidencia</div><div class="field-value" style="font-size:0.625rem">' + (spfData ? escapeHtml(spfData.raw || '') : '<span class="field-desc">Empty</span>') + '</div></div></div></div>';
+                if (dkimData) { container.innerHTML += '<div class="card"><div class="card-header"><div class="card-icon info">D</div><div class="card-title">DKIM-Signature</div></div><div class="card-body">' + (dkimData.algorithm ? '<div class="field-row"><div class="field-key">Algorithm</div><div class="field-value">' + escapeHtml(dkimData.algorithm) + '</div></div>' : '') + (dkimData.domain ? '<div class="field-row"><div class="field-key">Domain (d=)</div><div class="field-value">' + escapeHtml(dkimData.domain) + '</div></div>' : '') + (dkimData.selector ? '<div class="field-row"><div class="field-key">Selector (s=)</div><div class="field-value">' + escapeHtml(dkimData.selector) + '</div></div>' : '') + '</div></div>'; }
+                var dmarcActionDesc = { permerror: 'Error permanente (registro DMARC malformado)', temperror: 'Error temporal (reintentar puede ayudar)', oreject: 'Rechazo explícito', pct_quarantine: 'Porcentaje menor al 100% en cuarentena', pct_reject: 'Porcentaje menor al 100% rechazado' };
+                if (dmarcData) { container.innerHTML += '<div class="card"><div class="card-header"><div class="card-icon info">D</div><div class="card-title">DMARC</div></div><div class="card-body">' + (dmarcData.result ? '<div class="field-row"><div class="field-key">Result</div><div class="field-value"><span class="badge badge-' + getBadgeClass(dmarcData.result) + '">' + dmarcData.result + '</span> <span class="field-desc">' + (dmarcDesc[dmarcData.result] || '') + '</span></div></div>' : '') + (dmarcData.action ? '<div class="field-row"><div class="field-key">Action</div><div class="field-value">' + escapeHtml(dmarcData.action) + ' <span class="field-desc">' + (dmarcActionDesc[dmarcData.action] || '') + '</span></div></div>' : '') + (dmarcData.headerFrom ? '<div class="field-row"><div class="field-key">Header From</div><div class="field-value">' + escapeHtml(dmarcData.headerFrom) + '</div></div>' : '') + '</div></div>'; }
+
+                let domainWarnings = '';
+                if (headerFromDomain && envelopeFromDomain && headerFromDomain !== envelopeFromDomain) { domainWarnings += '<div class="domain-warning">Domain mismatch: Header From vs Return-Path</div>'; }
+                if (mailFromDomain && headerFromDomain && mailFromDomain !== headerFromDomain) { domainWarnings += '<div class="domain-warning">Domain mismatch: Header From vs MAIL FROM</div>'; }
+
+                var envelopeTableHtml = '<table class="analysis-table"><thead><tr><th>Campo</th><th>Valor</th><th>Evaluacion</th><th>Evidencia</th></tr></thead><tbody>';
+                envelopeTableHtml += '<tr><td>Header From</td><td>' + escapeHtml(from || 'N/A') + '</td><td><span class="badge badge-info">INFO</span></td><td class="analysis-evidence">' + escapeHtml(headerFromAddress || headerFromDomain || 'Empty') + '</td></tr>';
+                envelopeTableHtml += '<tr><td>Envelope</td><td>' + (envelopeHeader ? escapeHtml(envelopeHeader) : '<span class="field-desc">Empty</span>') + '</td><td><span class="badge badge-' + (envelopeHeader ? 'info' : 'none') + '">' + (envelopeHeader ? 'INFO' : 'Empty') + '</span></td><td class="analysis-evidence">' + escapeHtml(envelopeHeaderAddress || envelopeHeaderDomain || 'Empty') + '</td></tr>';
+                envelopeTableHtml += '<tr><td>From vs Envelope</td><td>' + escapeHtml((headerFromAddress || headerFromDomain || 'Empty') + ' vs ' + (envelopeHeaderAddress || envelopeHeaderDomain || 'Empty')) + '</td><td><span class="badge badge-' + (envelopeMismatch ? 'warn' : (envelopeHeader ? 'pass' : 'none')) + '">' + (envelopeMismatch ? 'WARNING' : (envelopeHeader ? 'OK' : 'Empty')) + '</span></td><td class="analysis-evidence">' + escapeHtml(envelopeComparisonEvidence) + '</td></tr>';
+                envelopeTableHtml += '<tr><td>MAIL FROM</td><td>' + escapeHtml(firstHopMailFrom || 'N/A') + '</td><td><span class="badge badge-info">INFO</span></td><td class="analysis-evidence">' + escapeHtml(mailFromDomain || 'Empty') + '</td></tr>';
+                envelopeTableHtml += '<tr><td>Return-Path</td><td>' + escapeHtml(returnPath || 'N/A') + '</td><td><span class="badge badge-info">INFO</span></td><td class="analysis-evidence">' + escapeHtml(envelopeFromDomain || 'Empty') + '</td></tr>';
+                envelopeTableHtml += '</tbody></table>';
+                container.innerHTML += '<div class="card"><div class="card-header"><div class="card-icon info">E</div><div class="card-title">Envelope Analysis</div></div><div class="card-body table-card-body">' + envelopeTableHtml + domainWarnings + '</div></div>';
+
+                let hopsHtml = '<div class="hop-chain">';
+                for (let i = 0; i < receivedHops.length; i++) { const hop = receivedHops[i]; const delayClass = hop.delay !== undefined ? (hop.delay < 10 ? 'delay-green' : (hop.delay < 120 ? 'delay-yellow' : 'delay-red')) : ''; const delayBadge = hop.delay !== undefined ? '<span class="hop-delay ' + delayClass + '">Delay: ' + hop.delay + 's</span>' : ''; const ipBadge = hop.ip ? '<span>IP: ' + escapeHtml(hop.ip) + ' (' + hop.ipType + ')</span>' : ''; const tlsBadge = hop.with ? '<span>Protocol: ' + escapeHtml(hop.with) + (String(hop.with).toUpperCase().includes('SMTPS') ? ' / TLS' : '') + '</span>' : ''; const alertHtml = hop.alerts && hop.alerts.length ? '<div class="hop-alert">' + hop.alerts.map(escapeHtml).join(' | ') + '</div>' : ''; hopsHtml += '<div class="hop-item"><div class="hop-number">' + (i + 1) + '</div><div class="hop-card"><div class="hop-route">' + escapeHtml(hop.from || 'unknown') + ' -> ' + escapeHtml(hop.by || 'unknown') + '</div><div class="hop-detail">' + ipBadge + tlsBadge + (hop.for ? '<span>For: ' + escapeHtml(hop.for) + '</span>' : '') + (hop.timestamp ? '<span>Time: ' + escapeHtml(hop.timestamp) + '</span>' : '') + delayBadge + '</div>' + alertHtml + '<div class="hop-raw">' + escapeHtml(hop.raw || '') + '</div></div></div>'; }
+                hopsHtml += '</div>';
+                container.innerHTML += '<div class="card"><div class="card-header"><div class="card-icon default">R</div><div class="card-title">Delivery Route (' + receivedHops.length + ' hops)</div></div><div class="card-body">' + hopsHtml + '</div></div>';
+
+                { 
+                    var catRisk = { AMP: 'ALTO - Malware', BIMP: 'ALTO - Suplanta marca', BULK: 'Bajo - Masivo', DIMP: 'ALTO - Suplanta dominio', FTBP: 'ALTO - Archivo malicioso', GIMP: 'ALTO - Suplanta buzon', HPHSH: 'MUY ALTO - Suplantacion', HSPM: 'ALTO - Spam sofisticado', INTOS: 'MEDIO - Phishing interno', MALW: 'MUY ALTO - Malware', OSPM: 'Bajo - Spam saliente', PHSH: 'ALTO - Phishing', SAP: 'ALTO - Archivo peligroso', SPM: 'Bajo - Spam', SPOOF: 'ALTO - Suplantacion', UIMP: 'ALTO - Suplanta usuario' };
+                    var sclRisk = { '-1': 'Sin filtrar', '0': 'Seguro', '1': 'Bajo', '5': 'Medio', '6': 'Alto', '9': 'Muy alto' };
+                    var sfvRisk = { BLK: 'Bloqueado', NSPM: 'No spam', SFE: 'Lista segura', SKA: 'Permitido', SKB: 'Spam', SKN: 'No spam', SKQ: 'Cuarentena', SKS: 'Spam', SPM: 'Spam' };
+                    var sftyRisk = { '9.19': 'SUPLANTACION', '9.20': 'SUPLANTACION', '9.25': 'AVISO' };
+                    var dangerousCats = ['AMP','BIMP','DIMP','GIMP','HPHSH','HPHISH','HSPM','INTOS','MALW','PHSH','SAP','SPOOF','UIMP'];
+                    var alertSfty = ['9.19','9.20'];
+                    var antiSpamByKey = {};
+                    antiSpamData.forEach(function(f) { antiSpamByKey[f.key] = f; });
+                    var expectedAntiSpamFields = [
+                        {key:'ARC', desc:'Authenticated Received Chain'},
+                        {key:'CIP', desc:'Dirección IP de conexión'},
+                        {key:'CTRY', desc:'País/región de origen'},
+                        {key:'LANG', desc:'Idioma detectado'},
+                        {key:'SCL', desc:'Nivel de confianza de spam'},
+                        {key:'SRV', desc:'Regla/servicio de filtro aplicado'},
+                        {key:'IPV', desc:'Reputación/lista de IP'},
+                        {key:'SFV', desc:'Veredicto del filtro antispam'},
+                        {key:'H', desc:'HELO/EHLO del servidor'},
+                        {key:'PTR', desc:'Reverse DNS / PTR'},
+                        {key:'CAT', desc:'Categoría de amenaza'},
+                        {key:'DIR', desc:'Direccionalidad del mensaje'},
+                        {key:'SFTY', desc:'Sugerencia de seguridad'},
+                        {key:'SFS', desc:'Coincidencias de firma'}
+                    ];
+                    var hasHighRisk = antiSpamData.some(function(f) {
+                        if (f.key === 'CAT') return dangerousCats.indexOf(f.value) >= 0;
+                        if (f.key === 'SCL') return parseInt(f.value, 10) >= 6;
+                        if (f.key === 'SFV') return ['SPM','SKB','SKS','BLK'].indexOf(f.value) >= 0;
+                        if (f.key === 'SFTY') return alertSfty.indexOf(f.value) >= 0;
+                        return false;
+                    });
+                    var tableHtml = '<table class="analysis-table"><thead><tr><th>Campo</th><th>Valor</th><th>Descripcion</th><th>Evaluacion</th></tr></thead><tbody>';
+                    for (var i = 0; i < expectedAntiSpamFields.length; i++) { 
+                        var expected = expectedAntiSpamFields[i];
+                        var f = antiSpamByKey[expected.key] || { key: expected.key, value: '', description: expected.desc };
+                        var isKey = ['CAT','SCL','SFTY','SFV','CIP'].indexOf(f.key) >= 0;
+                        var cellClass = isKey ? 'style="font-weight:600;color:var(--primary)"' : '';
+                        var riskHtml = f.value ? '' : '<span class="field-desc">Empty</span>';
+                        if (f.value && f.key === 'CAT') { riskHtml = '<span class="badge badge-' + (dangerousCats.indexOf(f.value) >= 0 ? 'fail' : 'warn') + '">' + (catRisk[f.value] || f.value) + '</span>'; }
+                        else if (f.value && f.key === 'SCL') { var v = parseInt(f.value); riskHtml = '<span class="badge badge-' + (v >= 6 ? 'fail' : (v >= 1 ? 'warn' : 'pass')) + '">' + (sclRisk[f.value] || f.value) + '</span>'; }
+                        else if (f.value && f.key === 'SFV') { riskHtml = '<span class="badge badge-' + (['SPM','SKB','SKS','BLK'].indexOf(f.value) >= 0 ? 'fail' : 'pass') + '">' + (sfvRisk[f.value] || f.value) + '</span>'; }
+                        else if (f.value && f.key === 'SFTY') { riskHtml = '<span class="badge badge-' + (alertSfty.indexOf(f.value) >= 0 ? 'fail' : 'warn') + '">' + (sftyRisk[f.value] || f.value) + '</span>'; }
+                        else if (f.value && (f.key === 'CIP' || f.key === 'CTRY' || f.key === 'PTR')) { riskHtml = '<span class="badge badge-info">INFO</span>'; }
+                        else if (f.value && f.key === 'DIR') { riskHtml = '<span class="badge badge-pass">OK</span>'; }
+                        tableHtml += '<tr><td ' + cellClass + '>' + escapeHtml(f.key) + '</td><td>' + (f.value ? escapeHtml(f.value) : '<span class="field-desc">Empty</span>') + '</td><td class="analysis-evidence">' + escapeHtml(f.description || expected.desc) + '</td><td>' + riskHtml + '</td></tr>'; 
+                    }
+                    tableHtml += '</tbody></table>';
+                    container.innerHTML += '<div class="card"><div class="card-header"><div class="card-icon info">X</div><div class="card-title">X-Forefront-Antispam-Report</div></div><div class="card-body table-card-body">' + tableHtml + '<div class="evidence-block"><div class="field-key">Evidencia</div><div class="analysis-evidence">' + (antiSpamRaw ? escapeHtml(antiSpamRaw) : '<span class="field-desc">Empty</span>') + '</div></div></div></div>';
+                }
+                {
+                    var microsoftByKey = {};
+                    microsoftAntispamData.forEach(function(f) { microsoftByKey[f.key] = f; });
+                    var expectedMicrosoftFields = [
+                        {key:'BCL', desc:'Bulk Complaint Level: valor de correo masivo'},
+                        {key:'PCL', desc:'Phishing Confidence Level: confianza de phishing'},
+                        {key:'EFV', desc:'Enhanced Filtering Verdict: veredicto de filtrado mejorado'}
+                    ];
+                    var microsoftHtml = '<table class="analysis-table"><thead><tr><th>Campo</th><th>Valor</th><th>Descripcion</th><th>Evaluacion</th></tr></thead><tbody>';
+                    for (var mi = 0; mi < expectedMicrosoftFields.length; mi++) {
+                        var mex = expectedMicrosoftFields[mi];
+                        var mf = microsoftByKey[mex.key] || { key: mex.key, value: '', description: mex.desc };
+                        var mrisk = mf.value ? '<span class="badge badge-info">INFO</span>' : '<span class="field-desc">Empty</span>';
+                        if (mf.key === 'BCL' && mf.value) { var bv = parseInt(mf.value, 10); mrisk = '<span class="badge badge-' + (bv >= 7 ? 'fail' : (bv >= 4 ? 'warn' : 'pass')) + '">' + (bv >= 7 ? 'ALTO' : (bv >= 4 ? 'MEDIO' : 'BAJO')) + '</span>'; }
+                        if (mf.key === 'PCL' && mf.value) { var pv = parseInt(mf.value, 10); mrisk = '<span class="badge badge-' + (pv >= 7 ? 'fail' : (pv >= 4 ? 'warn' : 'pass')) + '">' + (pv >= 7 ? 'ALTO' : (pv >= 4 ? 'MEDIO' : 'BAJO')) + '</span>'; }
+                        microsoftHtml += '<tr><td style="font-weight:600;color:var(--primary)">' + escapeHtml(mf.key) + '</td><td>' + (mf.value ? escapeHtml(mf.value) : '<span class="field-desc">Empty</span>') + '</td><td class="analysis-evidence">' + escapeHtml(mf.description || mex.desc) + '</td><td>' + mrisk + '</td></tr>';
+                    }
+                    microsoftHtml += '</tbody></table>';
+                    container.innerHTML += '<div class="card"><div class="card-header"><div class="card-icon info">X</div><div class="card-title">X-Microsoft-Antispam</div></div><div class="card-body table-card-body">' + microsoftHtml + '<div class="evidence-block"><div class="field-key">Evidencia</div><div class="analysis-evidence">' + (microsoftAntispamRaw ? escapeHtml(microsoftAntispamRaw) : '<span class="field-desc">Empty</span>') + '</div></div></div></div>';
+                }
+                if (otherHeaders.length > 0) { let h = ''; for (const hh of otherHeaders) { h += '<div class="field-row"><div class="field-key">' + escapeHtml(hh.key) + '</div><div class="field-value">' + escapeHtml(hh.value) + '</div></div>'; } container.innerHTML += '<div class="card"><div class="card-header"><div class="card-icon default">O</div><div class="card-title">Other Headers (' + otherHeaders.length + ')</div></div><div class="card-body">' + h + '</div></div>'; }
+                var securityAlerts = [];
+                if (authResults.spf === 'fail' || authResults.spf === 'softfail') securityAlerts.push({level:'high', text:'SPF ' + authResults.spf.toUpperCase() + ' - Servidor no autorizado', evidence: spfRaw || authResultsRaw || 'Empty'});
+                if (authResults.dkim === 'fail') securityAlerts.push({level:'high', text:'DKIM FAIL - Firma no valida', evidence: dkimRaw || authResultsRaw || 'Empty'});
+                if (authResults.dmarc === 'fail') securityAlerts.push({level:'high', text:'DMARC FAIL - Validacion fallida', evidence: authResultsRaw || 'Empty'});
+                if (authResults.compauth === 'fail') securityAlerts.push({level:'high', text:'CompAuth FAIL - Autenticacion compuesta fallida', evidence: authResultsRaw || 'Empty'});
+                var hasAntiSpamHigh = antiSpamData.some(function(f) {
+                    if (f.key === 'CAT') return ['AMP','BIMP','DIMP','GIMP','HPHSH','HPHISH','HSPM','INTOS','MALW','PHSH','SAP','SPOOF','UIMP'].indexOf(f.value) >= 0;
+                    if (f.key === 'SCL') return parseInt(f.value, 10) >= 6;
+                    if (f.key === 'SFV') return ['SPM','SKB','SKS','BLK'].indexOf(f.value) >= 0;
+                    if (f.key === 'SFTY') return ['9.19','9.20'].indexOf(f.value) >= 0;
+                    return false;
+                });
+                if (hasAntiSpamHigh) securityAlerts.push({level:'high', text:'X-Forefront-Antispam-Report: Amenaza detectada', evidence: antiSpamData.filter(function(f) { return ['CAT','SCL','SFV','SFTY'].indexOf(f.key) >= 0; }).map(function(f) { return f.key + ':' + f.value; }).join('; ') || antiSpamRaw || 'Empty'});
+                for (var msi = 0; msi < microsoftAntispamData.length; msi++) {
+                    if (microsoftAntispamData[msi].key === 'BCL' && parseInt(microsoftAntispamData[msi].value, 10) >= 7) securityAlerts.push({level:'medium', text:'X-Microsoft-Antispam: BCL alto (correo masivo/no deseado)', evidence: 'BCL:' + microsoftAntispamData[msi].value + ' | ' + (microsoftAntispamRaw || 'Empty')});
+                    if (microsoftAntispamData[msi].key === 'PCL' && parseInt(microsoftAntispamData[msi].value, 10) >= 7) securityAlerts.push({level:'high', text:'X-Microsoft-Antispam: PCL alto (posible phishing)', evidence: 'PCL:' + microsoftAntispamData[msi].value + ' | ' + (microsoftAntispamRaw || 'Empty')});
+                }
+                if (envelopeMismatch) securityAlerts.push({level:'medium', text:'Dominio Envelope diferente al From', evidence: envelopeComparisonEvidence});
+                if (headerFromDomain && envelopeFromDomain && headerFromDomain !== envelopeFromDomain) securityAlerts.push({level:'medium', text:'Dominio Return-Path diferente al From', evidence:'Header From: ' + headerFromDomain + ' | Return-Path: ' + envelopeFromDomain});
+                if (headerFromDomain && mailFromDomain && headerFromDomain !== mailFromDomain) securityAlerts.push({level:'medium', text:'Dominio MAIL FROM diferente al From', evidence:'Header From: ' + headerFromDomain + ' | MAIL FROM: ' + mailFromDomain});
+                for (var hi = 0; hi < receivedHops.length; hi++) { var hopFrom = (receivedHops[hi].from || '').toLowerCase(); if (hopFrom.indexOf('.ru') >= 0 || hopFrom.indexOf('.cn') >= 0 || hopFrom.indexOf('attacker') >= 0 || hopFrom.indexOf('phish') >= 0 || hopFrom.indexOf('malware') >= 0) { securityAlerts.push({level:'high', text:'Servidor sospechoso detectado: ' + receivedHops[hi].from, evidence: receivedHops[hi].raw || 'Empty'}); break; } }
+                if (securityAlerts.length > 0) {
+                    var securityAlertHtml = '<div class="card security-alert-card"><div class="card-header security-alert-header"><div class="card-icon error">!</div><div class="card-title security-alert-title"><span>ALERTA DE SEGURIDAD</span><span class="security-alert-subtitle">Resumen priorizado de hallazgos relevantes (' + securityAlerts.length + ')</span></div></div><div class="security-alert-body">';
+                    for (var ai = 0; ai < securityAlerts.length; ai++) {
+                        var alertLevel = securityAlerts[ai].level === 'high' ? 'ALTO' : 'MEDIO';
+                        var alertBadge = securityAlerts[ai].level === 'high' ? 'fail' : 'warn';
+                        securityAlertHtml += '<div class="security-alert-item"><div class="security-alert-severity"><span class="badge badge-' + alertBadge + '">' + alertLevel + '</span></div><div class="security-alert-text">' + escapeHtml(securityAlerts[ai].text) + '<div class="security-alert-evidence">Evidencia: ' + escapeHtml(securityAlerts[ai].evidence || 'Empty') + '</div></div></div>';
+                    }
+                    securityAlertHtml += '</div></div>';
+                    container.innerHTML += securityAlertHtml;
+                }
+                container.innerHTML += '<div style="display:flex;gap:0.5rem;margin-top:1rem"><button class="btn btn-primary copy-btn" style="flex:1" onclick="copyReport()">' + t('copyReport') + '</button><button class="btn btn-secondary" style="flex:1" onclick="generatePdfReport()">' + t('exportPdf') + '</button></div>';
+                localizeReportText(container);
+                window.currentReportData = { from, to, subject, date, messageId, returnPath, replyTo, xMailer, authResults, spfData, dkimData, dmarcData, receivedHops, antiSpamData, microsoftAntispamData, securityAlerts, findings, score, riskLevel, xOriginatingIP, envelopeHeader };
+            }
+
+            function getBadgeClass(result) { if (result === 'pass' || result === 'bestguess') return 'pass'; if (result === 'fail' || result === 'softfail') return 'fail'; if (result === 'none' || result === 'neutral') return 'none'; return 'warn'; }
+            function getFindingIcon(type) { if (type === 'ok') return 'OK'; if (type === 'fail') return 'X'; if (type === 'warn') return 'W'; return 'I'; }
+            function escapeHtml(str) { if (!str) return ''; return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+            function emptyValue(value) { return value ? escapeHtml(value) : '<span class="field-desc">Empty</span>'; }
+
+            window.copyReport = function() {
+                const data = window.currentReportData;
+                if (!data) return;
+                const riskLabels = currentLang === 'es' ? { low: 'RIESGO BAJO', medium: 'RIESGO MEDIO', high: 'RIESGO ALTO' } : { low: 'LOW RISK', medium: 'MEDIUM RISK', high: 'HIGH RISK' };
+                let report = '=====================================\n   ' + (currentLang === 'es' ? 'ANALISIS DE CABECERAS DE CORREO' : 'EMAIL HEADER ANALYSIS') + '\n=====================================\n\n' + t('risk') + ': ' + data.score + '/15 - ' + (riskLabels[data.riskLevel] || data.riskLevel.toUpperCase()) + '\n\n-----------------------------------\n' + t('securityFindings').toUpperCase() + '\n-----------------------------------\n';
+                for (const f of data.findings) { const icon = f.type === 'ok' ? '[PASS]' : f.type === 'fail' ? '[FAIL]' : f.type === 'warn' ? '[WARN]' : '[INFO]'; report += icon + ' ' + f.text + '\n'; }
+                report += '\n-----------------------------------\n' + t('authentication').toUpperCase() + '\n-----------------------------------\nSPF: ' + data.authResults.spf.toUpperCase() + '\nDKIM: ' + data.authResults.dkim.toUpperCase() + '\nDMARC: ' + data.authResults.dmarc.toUpperCase() + '\n';
+                report += '\n-----------------------------------\n' + t('details').toUpperCase() + '\n-----------------------------------\nFrom: ' + (data.from || 'N/A') + '\nEnvelope: ' + (data.envelopeHeader || 'N/A') + '\nTo: ' + (data.to || 'N/A') + '\nSubject: ' + (data.subject || 'N/A') + '\nReturn-Path: ' + (data.returnPath || 'N/A') + '\n';
+                if (data.receivedHops && data.receivedHops.length > 0) { report += '\n-----------------------------------\n' + t('deliveryRoute').toUpperCase() + '\n-----------------------------------\n'; for (let i = 0; i < data.receivedHops.length; i++) { const hop = data.receivedHops[i]; report += '[' + (i + 1) + '] ' + (hop.from || 'unknown') + ' -> ' + (hop.by || 'unknown') + '\n'; if (hop.ip) report += '    IP: ' + hop.ip + ' (' + (hop.ipType || 'unknown') + ')\n'; if (hop.delay !== undefined) report += '    ' + (currentLang === 'es' ? 'Demora' : 'Delay') + ': ' + hop.delay + 's\n'; if (hop.alerts && hop.alerts.length) report += '    ' + t('alerts') + ': ' + hop.alerts.join(' | ') + '\n'; } }
+                report += '\n=====================================\n';
+                try { navigator.clipboard.writeText(report).then(function() { var btn = document.querySelector('.copy-btn'); if (btn) { btn.textContent = t('copied') + '!'; setTimeout(function() { btn.textContent = t('copyReport'); }, 2000); } }); } catch(e) { alert(t('alertReport') + ':\n\n' + report); }
+            };
+
+            function pdfHexText(text) {
+                var str = String(text == null ? '' : text).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                str = str.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/[\u2013\u2014]/g, '-');
+                str = str.replace(/[^\x20-\x7E]/g, '?').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+                return '(' + str + ')';
+            }
+            function pdfEscapeNamePart(text) {
+                return String(text || 'report').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'report';
+            }
+            function wrapPdfText(text, maxChars) {
+                var raw = String(text == null || text === '' ? 'Empty' : text).replace(/\s+/g, ' ').trim();
+                var words = raw.split(' ');
+                var lines = [];
+                var line = '';
+                for (var i = 0; i < words.length; i++) {
+                    var word = words[i];
+                    if (word.length > maxChars) {
+                        if (line) { lines.push(line); line = ''; }
+                        for (var p = 0; p < word.length; p += maxChars) lines.push(word.slice(p, p + maxChars));
+                    } else if ((line + ' ' + word).trim().length > maxChars) {
+                        lines.push(line);
+                        line = word;
+                    } else {
+                        line = (line + ' ' + word).trim();
+                    }
+                }
+                if (line) lines.push(line);
+                return lines.length ? lines : ['Empty'];
+            }
+            function addPdfSection(lines, title) {
+                lines.push({ text: title, size: 13, bold: true, gapBefore: 10 });
+                lines.push({ text: ''.padEnd(72, '-'), size: 8 });
+            }
+            function addPdfKeyValue(lines, key, value) {
+                var wrapped = wrapPdfText(key + ': ' + (value || 'Empty'), 92);
+                for (var i = 0; i < wrapped.length; i++) lines.push({ text: wrapped[i], size: 9 });
+            }
+            function buildPdfLines(data) {
+                var riskLabels = currentLang === 'es' ? { low: 'RIESGO BAJO', medium: 'RIESGO MEDIO', high: 'RIESGO ALTO' } : { low: 'LOW RISK', medium: 'MEDIUM RISK', high: 'HIGH RISK' };
+                var lines = [];
+                lines.push({ text: currentLang === 'es' ? 'ANALISIS DE CABECERAS DE CORREO' : 'EMAIL HEADER ANALYSIS', size: 17, bold: true });
+                lines.push({ text: (currentLang === 'es' ? 'Exportado' : 'Exported') + ': ' + new Date().toLocaleString(), size: 9 });
+                lines.push({ text: t('risk') + ': ' + data.score + '/15 - ' + (riskLabels[data.riskLevel] || data.riskLevel.toUpperCase()), size: 12, bold: true, gapBefore: 8 });
+                addPdfKeyValue(lines, 'From', data.from || 'N/A');
+                addPdfKeyValue(lines, 'To', data.to || 'N/A');
+                addPdfKeyValue(lines, 'Subject', data.subject || 'N/A');
+                addPdfKeyValue(lines, 'Date', data.date || 'N/A');
+
+                addPdfSection(lines, t('securityFindings'));
+                for (var i = 0; i < (data.findings || []).length; i++) {
+                    var f = data.findings[i];
+                    addPdfKeyValue(lines, '[' + (f.result || f.type || 'info') + '] ' + (f.indicator || 'Finding'), f.text || 'Empty');
+                    addPdfKeyValue(lines, currentLang === 'es' ? 'Evidencia' : 'Evidence', f.evidence || 'Empty');
+                }
+
+                addPdfSection(lines, 'Authentication-Results');
+                addPdfKeyValue(lines, 'SPF', data.authResults ? data.authResults.spf : 'Empty');
+                addPdfKeyValue(lines, 'DKIM', data.authResults ? data.authResults.dkim : 'Empty');
+                addPdfKeyValue(lines, 'DMARC', data.authResults ? data.authResults.dmarc : 'Empty');
+                addPdfKeyValue(lines, 'CompAuth', data.authResults ? data.authResults.compauth : 'Empty');
+                addPdfKeyValue(lines, 'SMTP MAIL FROM', data.authResults ? data.authResults.smtpMailFrom : 'Empty');
+
+                addPdfSection(lines, 'Envelope Analysis');
+                addPdfKeyValue(lines, 'Envelope', data.envelopeHeader || 'Empty');
+                addPdfKeyValue(lines, 'Return-Path', data.returnPath || 'Empty');
+
+                addPdfSection(lines, t('deliveryRoute'));
+                for (var h = 0; h < (data.receivedHops || []).length; h++) {
+                    var hop = data.receivedHops[h];
+                    addPdfKeyValue(lines, 'Hop ' + (h + 1), (hop.from || 'unknown') + ' -> ' + (hop.by || 'unknown'));
+                    addPdfKeyValue(lines, 'IP', hop.ip ? hop.ip + ' (' + (hop.ipType || 'unknown') + ')' : 'Empty');
+                    if (hop.delay !== undefined) addPdfKeyValue(lines, currentLang === 'es' ? 'Demora' : 'Delay', hop.delay + 's');
+                    if (hop.alerts && hop.alerts.length) addPdfKeyValue(lines, t('alerts'), hop.alerts.join(' | '));
+                    addPdfKeyValue(lines, currentLang === 'es' ? 'Evidencia' : 'Evidence', hop.raw || 'Empty');
+                }
+
+                addPdfSection(lines, 'X-Forefront-Antispam-Report');
+                for (var a = 0; a < (data.antiSpamData || []).length; a++) addPdfKeyValue(lines, data.antiSpamData[a].key, data.antiSpamData[a].value + ' - ' + (data.antiSpamData[a].description || ''));
+
+                addPdfSection(lines, 'X-Microsoft-Antispam');
+                for (var m = 0; m < (data.microsoftAntispamData || []).length; m++) addPdfKeyValue(lines, data.microsoftAntispamData[m].key, data.microsoftAntispamData[m].value + ' - ' + (data.microsoftAntispamData[m].description || ''));
+
+                if (data.securityAlerts && data.securityAlerts.length) {
+                    addPdfSection(lines, currentLang === 'es' ? 'ALERTA DE SEGURIDAD' : 'SECURITY ALERT');
+                    for (var s = 0; s < data.securityAlerts.length; s++) {
+                        addPdfKeyValue(lines, '[' + data.securityAlerts[s].level.toUpperCase() + ']', data.securityAlerts[s].text);
+                        addPdfKeyValue(lines, currentLang === 'es' ? 'Evidencia' : 'Evidence', data.securityAlerts[s].evidence || 'Empty');
+                    }
+                }
+                return lines;
+            }
+            function renderPdfPages(lines) {
+                var pages = [];
+                var current = [];
+                var y = 770;
+                for (var i = 0; i < lines.length; i++) {
+                    var item = lines[i];
+                    var size = item.size || 9;
+                    var gapBefore = item.gapBefore || 0;
+                    var lineHeight = Math.max(12, size + 4);
+                    if (y - gapBefore - lineHeight < 55) {
+                        pages.push(current);
+                        current = [];
+                        y = 770;
+                    }
+                    y -= gapBefore;
+                    current.push({ text: item.text, size: size, bold: !!item.bold, y: y });
+                    y -= lineHeight;
+                }
+                if (current.length) pages.push(current);
+                return pages;
+            }
+            function buildPdfDocument(lines) {
+                var pages = renderPdfPages(lines);
+                var objects = [];
+                function addObject(body) { objects.push(body); return objects.length; }
+                var catalogId = addObject('');
+                var pagesId = addObject('');
+                var fontId = addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+                var pageIds = [];
+                for (var p = 0; p < pages.length; p++) {
+                    var content = 'BT\n';
+                    content += '/F1 8 Tf 50 28 Td ' + pdfHexText((currentLang === 'es' ? 'Pagina ' : 'Page ') + (p + 1) + ' / ' + pages.length) + ' Tj\n';
+                    content += 'ET\n';
+                    for (var l = 0; l < pages[p].length; l++) {
+                        var item = pages[p][l];
+                        content += 'BT\n/F1 ' + item.size + ' Tf\n50 ' + item.y + ' Td\n' + pdfHexText(item.text) + ' Tj\nET\n';
+                    }
+                    var contentId = addObject('<< /Length ' + content.length + ' >>\nstream\n' + content + 'endstream');
+                    var pageId = addObject('<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ' + fontId + ' 0 R >> >> /Contents ' + contentId + ' 0 R >>');
+                    pageIds.push(pageId);
+                }
+                objects[catalogId - 1] = '<< /Type /Catalog /Pages ' + pagesId + ' 0 R >>';
+                objects[pagesId - 1] = '<< /Type /Pages /Kids [' + pageIds.map(function(id) { return id + ' 0 R'; }).join(' ') + '] /Count ' + pageIds.length + ' >>';
+                var pdf = '%PDF-1.4\n';
+                var offsets = [0];
+                for (var o = 0; o < objects.length; o++) {
+                    offsets.push(pdf.length);
+                    pdf += (o + 1) + ' 0 obj\n' + objects[o] + '\nendobj\n';
+                }
+                var xref = pdf.length;
+                pdf += 'xref\n0 ' + (objects.length + 1) + '\n0000000000 65535 f \n';
+                for (var x = 1; x < offsets.length; x++) pdf += ('0000000000' + offsets[x]).slice(-10) + ' 00000 n \n';
+                pdf += 'trailer\n<< /Size ' + (objects.length + 1) + ' /Root ' + catalogId + ' 0 R >>\nstartxref\n' + xref + '\n%%EOF';
+                return pdf;
+            }
+            window.generatePdfReport = function() {
+                var data = window.currentReportData;
+                if (!data) return;
+                var report = document.getElementById('reportContainer');
+                if (!report || !report.innerHTML.trim()) return;
+                var styles = document.querySelector('style').innerHTML;
+                var fileTitle = pdfEscapeNamePart(data.subject || 'email-header-analysis') + '-' + new Date().toISOString().slice(0, 10);
+                var printableHtml = '<!DOCTYPE html><html lang="' + currentLang + '"><head><meta charset="UTF-8"><title>' + escapeHtml(fileTitle) + '</title><style>' + styles + '\nbody{background:var(--bg);color:var(--text);padding:24px;} .pdf-shell{max-width:1180px;margin:0 auto;} .pdf-meta{margin-bottom:18px;color:var(--text-muted);font-family:Cascadia Mono,Consolas,monospace;font-size:0.78rem;} .report-actions,.copy-btn,.header,.input-panel,.drawer-backdrop{display:none!important;} @media print{body{background:#fff!important;color:#111!important;padding:0;} .pdf-shell{max-width:none;margin:0;} .card{break-inside:avoid;box-shadow:none!important;margin-bottom:16px;} .card-header{background:#f3f6fb!important;color:#111!important;} .card-title,.field-value,.field-key,.analysis-table td,.analysis-table th,.analysis-evidence{color:#111!important;} .analysis-table th{background:#dfe9f7!important;color:#111!important;} .badge{print-color-adjust:exact;-webkit-print-color-adjust:exact;} .risk-banner,.card-icon{print-color-adjust:exact;-webkit-print-color-adjust:exact;} .evidence-block{background:#f7f7f7!important;} }</style></head><body class="' + (document.body.classList.contains('light') ? 'light' : '') + '"><main class="pdf-shell"><div class="pdf-meta">' + escapeHtml(t('exportPdf')) + ': ' + escapeHtml(new Date().toLocaleString()) + '</div>' + report.innerHTML + '</main><script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script></body></html>';
+                var printWindow = window.open('', '_blank');
+                if (!printWindow) {
+                    alert(currentLang === 'es' ? 'Permite ventanas emergentes para exportar el PDF.' : 'Allow pop-ups to export the PDF.');
+                    return;
+                }
+                printWindow.document.open();
+                printWindow.document.write(printableHtml);
+                printWindow.document.close();
+            };
+        });
+    </script>
+</body>
+</html>
