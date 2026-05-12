@@ -22,6 +22,10 @@
 <img src="https://img.shields.io/badge/DMARC-Detection-success?style=flat-square">
 <img src="https://img.shields.io/badge/SMTP-Route%20Analysis-success?style=flat-square">
 
+<br><br>
+
+<img width="100%" src="https://github.com/PinoitOS/Header-Analyzer/blob/main/3.png?raw=true">
+
 </div>
 
 <hr>
@@ -37,10 +41,10 @@
 <ul>
   <li>SMTP authentication,</li>
   <li><code>Received</code> routes,</li>
-  <li>Anti-spam indicators,</li>
-  <li>Sender inconsistencies,</li>
-  <li>Spoofing or phishing indicators,</li>
-  <li>and Common Suspicious Email Anomalies.</li>
+  <li>anti-spam indicators,</li>
+  <li>sender inconsistencies,</li>
+  <li>spoofing or phishing indicators,</li>
+  <li>and common suspicious email anomalies.</li>
 </ul>
 
 <p>
@@ -106,17 +110,20 @@
 <div align="center">
 
 <h3>Main Interface</h3>
-<img width="100%" src="images/main-ui.png">
 
-<br><br>
+<img width="100%" src="https://github.com/PinoitOS/Header-Analyzer/blob/main/3.png?raw=true">
+
+<br><br><br>
 
 <h3>SMTP Route Analysis</h3>
-<img width="100%" src="images/smtp-route.png">
 
-<br><br>
+<img width="100%" src="https://github.com/PinoitOS/Header-Analyzer/blob/main/1.png?raw=true">
+
+<br><br><br>
 
 <h3>Security Findings</h3>
-<img width="100%" src="images/security-findings.png">
+
+<img width="100%" src="https://github.com/PinoitOS/Header-Analyzer/blob/main/2.png?raw=true">
 
 </div>
 
