@@ -5,7 +5,7 @@
 <h3>Visual Email Header & SMTP Route Analyzer</h3>
 
 <p>
-  Analiza cabeceras SMTP, autenticación de correo y rutas de entrega desde una interfaz visual moderna.
+  Analyze SMTP headers, email authentication, and delivery routes through a modern visual interface.
 </p>
 
 <br>
@@ -29,22 +29,22 @@
 <h2>✨ Overview</h2>
 
 <p>
-  <strong>Header Analyzer</strong> es una herramienta visual para analizar cabeceras de correo electrónico directamente desde el navegador.
+  <strong>Header Analyzer</strong> is a browser-based tool designed to analyze email headers visually and efficiently.
 </p>
 
-<p>Permite inspeccionar:</p>
+<p>It allows you to inspect:</p>
 
 <ul>
-  <li>Autenticación SMTP,</li>
-  <li>Rutas <code>Received</code>,</li>
-  <li>Señales antispam,</li>
-  <li>Inconsistencias de remitente,</li>
-  <li>Indicadores de spoofing o phishing,</li>
-  <li>Y anomalías comunes en correos sospechosos.</li>
+  <li>SMTP authentication,</li>
+  <li><code>Received</code> routes,</li>
+  <li>Anti-spam indicators,</li>
+  <li>Sender inconsistencies,</li>
+  <li>Spoofing or phishing indicators,</li>
+  <li>and Common Suspicious Email Anomalies.</li>
 </ul>
 
 <p>
-  Todo desde una interfaz moderna y completamente client-side.
+  Everything runs locally in the browser with a modern and responsive interface.
 </p>
 
 <hr>
@@ -67,24 +67,24 @@
 <ul>
   <li>Full <code>Received</code> chain parsing</li>
   <li>SMTP hop visualization</li>
-  <li>Delivery delays</li>
+  <li>Delivery delay detection</li>
   <li>Internal/private IP detection</li>
-  <li>Route inconsistencies</li>
+  <li>Route inconsistency analysis</li>
   <li>Suspicious relay detection</li>
 </ul>
 
 <h3>🚨 Security Detection</h3>
 
 <ul>
-  <li>SPF <code>fail</code></li>
-  <li>DKIM ausente</li>
-  <li>DMARC inválido</li>
-  <li>Envelope mismatch</li>
-  <li>Reply-To sospechoso</li>
-  <li>SMTP anomalies</li>
-  <li>Suspicious HELO/EHLO</li>
-  <li>Antispam indicators</li>
-  <li>Potential spoofing attempts</li>
+  <li>SPF <code>fail</code> detection</li>
+  <li>Missing DKIM detection</li>
+  <li>Invalid DMARC detection</li>
+  <li>Envelope mismatch detection</li>
+  <li>Suspicious Reply-To detection</li>
+  <li>SMTP anomaly detection</li>
+  <li>Suspicious HELO/EHLO analysis</li>
+  <li>Anti-spam indicator parsing</li>
+  <li>Potential spoofing detection</li>
 </ul>
 
 <h3>🎨 Interface</h3>
@@ -161,15 +161,15 @@ cd Header-Analyzer
     <ul>
       <li>risk score,</li>
       <li>SMTP route,</li>
-      <li>SPF/DKIM/DMARC,</li>
+      <li>SPF/DKIM/DMARC results,</li>
       <li>security findings,</li>
-      <li>antispam indicators.</li>
+      <li>anti-spam indicators.</li>
     </ul>
   </li>
 </ol>
 
 <p>
-  También puedes cargar un ejemplo integrado para pruebas rápidas.
+  You can also load a built-in sample for quick testing.
 </p>
 
 <hr>
@@ -186,11 +186,11 @@ cd Header-Analyzer
   <tbody>
     <tr>
       <td><code>Received</code></td>
-      <td>SMTP route</td>
+      <td>SMTP route analysis</td>
     </tr>
     <tr>
       <td><code>Authentication-Results</code></td>
-      <td>SPF / DKIM / DMARC</td>
+      <td>SPF / DKIM / DMARC results</td>
     </tr>
     <tr>
       <td><code>Received-SPF</code></td>
@@ -206,7 +206,7 @@ cd Header-Analyzer
     </tr>
     <tr>
       <td><code>Reply-To</code></td>
-      <td>Response address</td>
+      <td>Reply destination</td>
     </tr>
     <tr>
       <td><code>X-Originating-IP</code></td>
@@ -214,7 +214,7 @@ cd Header-Analyzer
     </tr>
     <tr>
       <td><code>X-Forefront-AntiSpam-Report</code></td>
-      <td>Microsoft antispam telemetry</td>
+      <td>Microsoft anti-spam telemetry</td>
     </tr>
     <tr>
       <td><code>X-Microsoft-Antispam</code></td>
@@ -222,7 +222,7 @@ cd Header-Analyzer
     </tr>
     <tr>
       <td><code>Message-ID</code></td>
-      <td>Message tracking</td>
+      <td>Email tracking identifier</td>
     </tr>
   </tbody>
 </table>
