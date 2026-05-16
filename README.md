@@ -1,8 +1,21 @@
-<p align="center">
-  <img alt="Header Analyzer" width="96" height="96" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070b18'/%3E%3Ccircle cx='28' cy='28' r='14' fill='none' stroke='%2319c7d4' stroke-width='6'/%3E%3Cpath d='M39 39 L52 52' stroke='%238b5cf6' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='28' cy='28' r='7' fill='%23111827'/%3E%3C/svg%3E" />
-</p>
+
 
 <h1 align="center">Header Analyzer</h1>
+
+<p align="center">
+  <img alt="Header Analyzer icon" src="./icon.svg" width="96" height="96" />
+</p>
+
+<p align="center">
+  <img alt="Header Analyzer" src="https://img.shields.io/badge/Header%20Analyzer-Offline%20Email%20Header%20Analyzer-19c7d4?style=for-the-badge&labelColor=070b18" />
+</p>
+
+<p align="center">
+  <img alt="Offline" src="https://img.shields.io/badge/Offline-100%25-19c7d4?style=flat&labelColor=0b1224" />
+  <img alt="Formats" src="https://img.shields.io/badge/Formats-EML%20%7C%20MSG-8b5cf6?style=flat&labelColor=0b1224" />
+  <img alt="Network" src="https://img.shields.io/badge/Network-none-111827?style=flat&labelColor=0b1224" />
+  <img alt="Runs in browser" src="https://img.shields.io/badge/Runs%20in-Browser-0b1224?style=flat&labelColor=0b1224" />
+</p>
 
 <p align="center">
   <strong>ES:</strong> Analizador <em>offline</em> de cabeceras de correo (<code>.eml</code> / <code>.msg</code>) para investigacion rapida.
@@ -11,15 +24,9 @@
 </p>
 
 <p align="center">
-  <img alt="Offline" src="https://img.shields.io/badge/Offline-100%25-19c7d4?style=for-the-badge" />
-  <img alt="Formats" src="https://img.shields.io/badge/Formats-EML%20%7C%20MSG-8b5cf6?style=for-the-badge" />
-  <img alt="No network" src="https://img.shields.io/badge/Network-none-111827?style=for-the-badge" />
-</p>
-
-<p align="center">
-  <img alt="Browsers" src="https://img.shields.io/badge/Browsers-Brave%20%7C%20Chrome%20%7C%20Firefox-0b1224?style=flat" />
-  <img alt="Privacy" src="https://img.shields.io/badge/Privacy-local%20processing-0b1224?style=flat" />
-  <img alt="License" src="https://img.shields.io/badge/MsgReader-Apache--2.0-0b1224?style=flat" />
+  <img alt="Browsers" src="https://img.shields.io/badge/Browsers-Brave%20%7C%20Chrome%20%7C%20Firefox-0b1224?style=flat&labelColor=0b1224" />
+  <img alt="Privacy" src="https://img.shields.io/badge/Privacy-local%20processing-0b1224?style=flat&labelColor=0b1224" />
+  <img alt="License" src="https://img.shields.io/badge/MsgReader-Apache--2.0-0b1224?style=flat&labelColor=0b1224" />
 </p>
 
 <hr>
