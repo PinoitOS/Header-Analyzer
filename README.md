@@ -1,391 +1,311 @@
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Header Analyzer</title>
-  <meta name="description" content="Analizador offline de cabeceras de correo (.eml/.msg) para investigacion rapida.">
-  <style>
-    :root{
-      --bg:#070b18; --surface:#0d1424; --surface2:#111827;
-      --text:#e6edf7; --muted:#8d9ab8;
-      --primary:#19c7d4; --accent:#8b5cf6;
-      --border:rgba(124,140,181,.22); --shadow:rgba(0,0,0,.45);
-      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Cascadia Mono", monospace;
-      --sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:var(--sans);
-      color:var(--text);
-      background:
-        radial-gradient(circle at 20% 0%, rgba(139,92,246,0.18), transparent 28%),
-        radial-gradient(circle at 85% 12%, rgba(25,199,212,0.14), transparent 30%),
-        var(--bg);
-      line-height:1.55;
-    }
-    a{color:inherit}
-    code{font-family:var(--mono); font-size:.95em}
+<p align="center">
+  <img alt="Header Analyzer" width="96" height="96" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070b18'/%3E%3Ccircle cx='28' cy='28' r='14' fill='none' stroke='%2319c7d4' stroke-width='6'/%3E%3Cpath d='M39 39 L52 52' stroke='%238b5cf6' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='28' cy='28' r='7' fill='%23111827'/%3E%3C/svg%3E" />
+</p>
 
-    .wrap{max-width:1120px; margin:0 auto; padding:24px 18px 60px}
+<h1 align="center">Header Analyzer</h1>
 
-    .topbar{
-      position:sticky; top:0; z-index:50;
-      background:rgba(7,11,24,.78);
-      backdrop-filter:blur(14px);
-      border-bottom:1px solid var(--border);
-    }
-    .topbar-inner{
-      max-width:1120px; margin:0 auto;
-      padding:14px 18px;
-      display:flex; align-items:center; gap:12px;
-    }
-    .brand{display:flex; align-items:center; gap:10px; flex:1; min-width:0}
-    .logo{
-      width:34px; height:34px; border-radius:10px;
-      background:linear-gradient(135deg, rgba(25,199,212,.20), rgba(139,92,246,.20));
-      border:1px solid var(--border);
-      display:grid; place-items:center;
-      box-shadow:0 10px 26px rgba(0,0,0,.25);
-      flex:0 0 auto;
-    }
-    .brand h1{margin:0; font-size:14px; letter-spacing:.12em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+<p align="center">
+  <strong>ES:</strong> Analizador <em>offline</em> de cabeceras de correo (<code>.eml</code> / <code>.msg</code>) para investigacion rapida.
+  <br>
+  <strong>EN:</strong> Offline email header analyzer (<code>.eml</code> / <code>.msg</code>) for fast investigations.
+</p>
 
-    .lang{
-      display:flex; gap:6px; padding:6px;
-      border:1px solid var(--border); border-radius:12px;
-      background:rgba(255,255,255,.04);
-    }
-    .lang button{
-      border:0; cursor:pointer;
-      padding:8px 10px; border-radius:9px;
-      background:transparent; color:var(--muted);
-      font-weight:850; font-size:12px; letter-spacing:.08em;
-    }
-    .lang button.active{
-      color:#fff;
-      background:linear-gradient(135deg,var(--primary),var(--accent));
-      box-shadow:0 10px 26px rgba(25,199,212,.16);
-    }
+<p align="center">
+  <img alt="Offline" src="https://img.shields.io/badge/Offline-100%25-19c7d4?style=for-the-badge" />
+  <img alt="Formats" src="https://img.shields.io/badge/Formats-EML%20%7C%20MSG-8b5cf6?style=for-the-badge" />
+  <img alt="No network" src="https://img.shields.io/badge/Network-none-111827?style=for-the-badge" />
+</p>
 
-    .hero{
-      display:grid; grid-template-columns:1.05fr .95fr;
-      gap:18px; align-items:stretch;
-      padding:22px; margin-top:18px;
-      border:1px solid var(--border); border-radius:18px;
-      background:linear-gradient(180deg, rgba(17,24,39,.92), rgba(13,20,36,.92));
-      box-shadow:0 20px 60px var(--shadow);
-    }
-    .hero h2{margin:0 0 8px; font-size:30px; letter-spacing:.02em}
-    .hero p{margin:0; color:var(--muted); font-size:15px}
-    .chips{display:flex; flex-wrap:wrap; gap:10px; margin-top:14px}
-    .chip{
-      border:1px solid var(--border); border-radius:999px;
-      padding:6px 10px; font-weight:800; font-size:12px;
-      background:rgba(255,255,255,.04);
-    }
-    .chip.off{border-color:rgba(25,199,212,.35)}
-    .chip.file{border-color:rgba(139,92,246,.35)}
-    .chip.safe{border-color:rgba(23,185,120,.35)}
+<p align="center">
+  <img alt="Browsers" src="https://img.shields.io/badge/Browsers-Brave%20%7C%20Chrome%20%7C%20Firefox-0b1224?style=flat" />
+  <img alt="Privacy" src="https://img.shields.io/badge/Privacy-local%20processing-0b1224?style=flat" />
+  <img alt="License" src="https://img.shields.io/badge/MsgReader-Apache--2.0-0b1224?style=flat" />
+</p>
 
-    .hero-card{
-      border:1px solid var(--border); border-radius:16px;
-      background:rgba(7,11,24,.35);
-      padding:16px;
-      display:flex; flex-direction:column; gap:10px;
-    }
-    .hero-card-title{margin:0; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--primary); font-weight:900}
-    .kv{display:grid; grid-template-columns:150px 1fr; gap:10px; align-items:start}
-    .k{color:var(--muted); font-weight:800; font-size:12px; letter-spacing:.08em; text-transform:uppercase}
-    .v{font-family:var(--mono); font-size:12.5px; color:var(--text); word-break:break-word}
+<hr>
 
-    .grid{display:grid; grid-template-columns:repeat(12,1fr); gap:16px; margin-top:18px}
-    .card{
-      grid-column:span 6;
-      border:1px solid var(--border); border-radius:16px;
-      background:linear-gradient(180deg, rgba(17,24,39,.90), rgba(13,20,36,.90));
-      box-shadow:0 16px 48px rgba(0,0,0,.22);
-      padding:18px;
-    }
-    .card h3{margin:0 0 10px; font-size:14px; letter-spacing:.12em; text-transform:uppercase}
-    .card p{margin:0; color:var(--muted); font-size:14px}
-    .list{margin:12px 0 0; padding-left:18px; color:var(--text); font-size:14px}
-    .list li{margin:6px 0}
+<h2>Resumen / Summary</h2>
 
-    .gallery{
-      margin-top:18px;
-      border:1px solid var(--border); border-radius:18px;
-      background:rgba(7,11,24,.25);
-      overflow:hidden;
-    }
-    .gallery-head{
-      padding:14px 16px;
-      display:flex; gap:12px; align-items:center; justify-content:space-between;
-      border-bottom:1px solid var(--border);
-      background:rgba(255,255,255,.03);
-    }
-    .gallery-head h3{margin:0; font-size:14px; letter-spacing:.12em; text-transform:uppercase}
-    .gallery-body{display:grid; grid-template-columns:1fr; gap:0}
-    .shot{padding:14px; border-top:1px solid var(--border)}
-    .shot:first-child{border-top:0}
-    .shot img{
-      width:100%; height:auto; display:block;
-      border-radius:14px;
-      border:1px solid rgba(124,140,181,.25);
-      box-shadow:0 18px 60px rgba(0,0,0,.35);
-      background:#000;
-    }
-    .caption{margin:10px 4px 0; color:var(--muted); font-size:13px}
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>ES</h3>
+      <p>Extrae y organiza senales tecnicas para acelerar el triage:</p>
+      <ul>
+        <li><strong>Ruta de entrega (Received):</strong> saltos, delays y anomalias.</li>
+        <li><strong>Autenticacion:</strong> SPF / DKIM / DMARC / CompAuth (si existe).</li>
+        <li><strong>Senales Microsoft:</strong> <code>X-Forefront-Antispam-Report</code> y <code>X-Microsoft-Antispam</code>.</li>
+        <li><strong>Salida:</strong> export PDF/JSON/TXT y copia de IOCs.</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>EN</h3>
+      <p>Extracts and organizes technical signals to speed up triage:</p>
+      <ul>
+        <li><strong>Delivery route (Received):</strong> hops, delays, anomalies.</li>
+        <li><strong>Authentication:</strong> SPF / DKIM / DMARC / CompAuth (when present).</li>
+        <li><strong>Microsoft signals:</strong> <code>X-Forefront-Antispam-Report</code> and <code>X-Microsoft-Antispam</code>.</li>
+        <li><strong>Output:</strong> export PDF/JSON/TXT and IOC copy.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
-    .footer{
-      margin-top:22px;
-      border-top:1px solid var(--border);
-      padding-top:18px;
-      display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between;
-      color:var(--muted);
-      font-size:13px;
-    }
+<blockquote>
+  <p><strong>ES:</strong> Objetivo: que puedas decidir rapido si un correo parece legitimo, masivo o suplantado, y extraer IOCs sin depender de servicios externos.</p>
+  <p><strong>EN:</strong> Goal: quickly decide whether a message looks legitimate, bulk, or spoofed, and extract IOCs without relying on external services.</p>
+</blockquote>
 
-    @media (max-width: 900px){
-      .hero{grid-template-columns:1fr}
-      .card{grid-column:span 12}
-      .kv{grid-template-columns:1fr}
-    }
-  </style>
-</head>
-<body>
-  <div class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <div class="logo" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--primary)" stroke-width="2">
-            <circle cx="11" cy="11" r="7"></circle>
-            <path d="M21 21l-4.3-4.3"></path>
-          </svg>
-        </div>
-        <h1>Header Analyzer</h1>
-      </div>
+<h2>Flujo de trabajo / Workflow</h2>
 
-      <div class="lang" aria-label="Language selector">
-        <button type="button" id="langEs" class="active">ES</button>
-        <button type="button" id="langEn">EN</button>
-      </div>
-    </div>
-  </div>
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>ES</h3>
+      <ol>
+        <li>Carga un <code>.eml</code> / <code>.msg</code> o pega cabeceras crudas.</li>
+        <li>Revisa el <strong>Risk Score</strong> y el <strong>Analyst Summary</strong>.</li>
+        <li>Confirma la ruta <strong>Delivery Route (Received)</strong>: origen, saltos, delays, alertas.</li>
+        <li>Valida autenticacion: <strong>SPF/DKIM/DMARC</strong> y <strong>CompAuth</strong>.</li>
+        <li>Extrae artefactos: exporta o copia IOCs.</li>
+      </ol>
+    </td>
+    <td width="50%" valign="top">
+      <h3>EN</h3>
+      <ol>
+        <li>Load an <code>.eml</code> / <code>.msg</code> file or paste raw headers.</li>
+        <li>Review <strong>Risk Score</strong> and <strong>Analyst Summary</strong>.</li>
+        <li>Confirm <strong>Delivery Route (Received)</strong>: origin, hops, delays, alerts.</li>
+        <li>Validate authentication: <strong>SPF/DKIM/DMARC</strong> and <strong>CompAuth</strong>.</li>
+        <li>Extract artifacts: export or copy IOCs.</li>
+      </ol>
+    </td>
+  </tr>
+</table>
 
-  <main class="wrap">
-    <section class="hero">
-      <div>
-        <h2 data-i18n="heroTitle">Analizador offline de cabeceras (.eml / .msg)</h2>
-        <p data-i18n="heroSubtitle">Investiga rutas de entrega, autenticacion y senales antispam sin enviar nada a servidores: todo ocurre en tu navegador.</p>
-        <div class="chips" aria-label="Highlights">
-          <span class="chip off" data-i18n="chipOffline">100% offline</span>
-          <span class="chip file" data-i18n="chipFormats">EML + MSG</span>
-          <span class="chip safe" data-i18n="chipPrivate">Sin red / sin tracking</span>
-        </div>
-      </div>
+<h2>Cobertura de senales / Signal coverage</h2>
 
-      <aside class="hero-card">
-        <p class="hero-card-title" data-i18n="quickFacts">Ficha rapida</p>
-        <div class="kv">
-          <div class="k" data-i18n="factTech">Tecnologias</div>
-          <div class="v" data-i18n="factTechValue">HTML + CSS + JavaScript (sin backend). MsgReader (Apache-2.0) para .msg.</div>
+<table>
+  <tr>
+    <th align="left">Area</th>
+    <th align="left">Senales / Signals</th>
+    <th align="left">Para que sirve / Why it matters</th>
+  </tr>
+  <tr>
+    <td><strong>Ruta</strong></td>
+    <td><code>Received</code>, hop delays, IP type (public/private), anomalies</td>
+    <td>Detecta redirecciones raras, delays altos, o infra sospechosa.</td>
+  </tr>
+  <tr>
+    <td><strong>Auth</strong></td>
+    <td><code>SPF</code>, <code>DKIM</code>, <code>DMARC</code>, <code>Authentication-Results</code>, <code>Received-SPF</code></td>
+    <td>Base para detectar suplantacion y problemas de alineacion.</td>
+  </tr>
+  <tr>
+    <td><strong>Microsoft</strong></td>
+    <td><code>X-Forefront-Antispam-Report</code>, <code>X-Microsoft-Antispam</code> (BCL/PCL/EFV)</td>
+    <td>Contexto extra para bulk/spam/phishing en ecosistema M365.</td>
+  </tr>
+  <tr>
+    <td><strong>Artefactos</strong></td>
+    <td>Emails, dominios, IPs, Message-Id, HELO/PTR (si aparece)</td>
+    <td>Facilita hunting, bloqueos y correlacion con otros eventos.</td>
+  </tr>
+</table>
 
-          <div class="k" data-i18n="factRuns">Ejecucion</div>
-          <div class="v" data-i18n="factRunsValue">Navegador moderno (Brave/Chrome/Firefox). Sin instalacion.</div>
+<h2>Exportacion / Export</h2>
 
-          <div class="k" data-i18n="factSecurity">Seguridad</div>
-          <div class="v" data-i18n="factSecurityValue">CSP pragmatica + render con DOM/textContent para minimizar XSS.</div>
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>ES</h3>
+      <ul>
+        <li><strong>PDF:</strong> reporte legible para compartir.</li>
+        <li><strong>JSON:</strong> datos estructurados para automatizacion.</li>
+        <li><strong>TXT:</strong> texto plano para tickets o notas.</li>
+        <li><strong>IOCs:</strong> copia rapida (IPs/dominios/emails/Message-Id).</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>EN</h3>
+      <ul>
+        <li><strong>PDF:</strong> human-readable report for sharing.</li>
+        <li><strong>JSON:</strong> structured data for automation.</li>
+        <li><strong>TXT:</strong> plain text for tickets/notes.</li>
+        <li><strong>IOCs:</strong> quick copy (IPs/domains/emails/Message-Id).</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
-          <div class="k" data-i18n="factLimit">Limite</div>
-          <div class="v" data-i18n="factLimitValue">Archivos grandes pueden consumir CPU/memoria (especialmente .msg).</div>
-        </div>
-      </aside>
-    </section>
+<h2>Tecnologias / Technologies</h2>
 
-    <section class="grid">
-      <article class="card">
-        <h3 data-i18n="whatTitle">Que hace</h3>
-        <p data-i18n="whatIntro">Extrae y organiza senales tecnicas habituales para acelerar el triage.</p>
-        <ul class="list">
-          <li data-i18n="what1">Ruta de entrega (Received): saltos, delays y anomalias.</li>
-          <li data-i18n="what2">Autenticacion: SPF / DKIM / DMARC / CompAuth (cuando existe).</li>
-          <li data-i18n="what3">Senales Microsoft: X-Forefront-Antispam-Report y X-Microsoft-Antispam.</li>
-          <li data-i18n="what4">Exportacion (PDF/JSON/TXT) y copia de IOCs.</li>
-        </ul>
-      </article>
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>ES</h3>
+      <ul>
+        <li><strong>Stack:</strong> HTML + CSS + JavaScript (sin backend).</li>
+        <li><strong>.msg:</strong> MsgReader (Apache-2.0).</li>
+        <li><strong>Seguridad:</strong> CSP pragmatica + render con DOM/<code>textContent</code> para minimizar XSS.</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>EN</h3>
+      <ul>
+        <li><strong>Stack:</strong> HTML + CSS + JavaScript (no backend).</li>
+        <li><strong>.msg:</strong> MsgReader (Apache-2.0).</li>
+        <li><strong>Security:</strong> pragmatic CSP + DOM/<code>textContent</code> rendering to minimize XSS.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
-      <article class="card">
-        <h3 data-i18n="howTitle">Como se usa</h3>
-        <p data-i18n="howIntro">Pensado para uso rapido en analisis e investigacion.</p>
-        <ul class="list">
-          <li data-i18n="how1">Pega cabeceras crudas o carga un archivo .eml/.msg.</li>
-          <li data-i18n="how2">Ejecuta el analisis y revisa el resumen, la ruta y las senales.</li>
-          <li data-i18n="how3">Exporta o copia IOCs si necesitas compartir hallazgos.</li>
-        </ul>
-      </article>
+<h2>Seguridad (modelo) / Security model</h2>
 
-      <article class="card">
-        <h3 data-i18n="privacyTitle">Privacidad</h3>
-        <p data-i18n="privacyIntro">El diseno prioriza aislamiento y control local.</p>
-        <ul class="list">
-          <li data-i18n="privacy1">No se hacen peticiones de red (CSP: connect-src 'none').</li>
-          <li data-i18n="privacy2">Los datos permanecen en tu navegador.</li>
-          <li data-i18n="privacy3">El export "raw" puede contener datos sensibles: usalo con cuidado.</li>
-        </ul>
-      </article>
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>ES</h3>
+      <ul>
+        <li><strong>Offline por diseno:</strong> no requiere backend.</li>
+        <li><strong>Mitigacion XSS:</strong> render principal con DOM/<code>textContent</code> (evita interpretar HTML).</li>
+        <li><strong>CSP:</strong> politica pragmatica para single-file.</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>EN</h3>
+      <ul>
+        <li><strong>Offline by design:</strong> no backend required.</li>
+        <li><strong>XSS mitigation:</strong> main rendering uses DOM/<code>textContent</code> (prevents HTML interpretation).</li>
+        <li><strong>CSP:</strong> pragmatic policy for a single-file app.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
-      <article class="card">
-        <h3 data-i18n="limitsTitle">Limitaciones</h3>
-        <p data-i18n="limitsIntro">Importante para interpretar resultados correctamente.</p>
-        <ul class="list">
-          <li data-i18n="limits1">En .msg no siempre se puede reconstruir la cadena Received completa.</li>
-          <li data-i18n="limits2">Archivos complejos pueden tardar o consumir recursos.</li>
-          <li data-i18n="limits3">Algunas senales pueden estar ausentes segun el proveedor.</li>
-        </ul>
-      </article>
-    </section>
+<h2>Privacidad y limitaciones / Privacy & limitations</h2>
 
-    <section class="gallery" aria-label="Screenshots">
-      <div class="gallery-head">
-        <h3 data-i18n="shotsTitle">Capturas</h3>
-        <div class="caption" data-i18n="shotsHint">Orden: 3 -> 1 -> 2</div>
-      </div>
-      <div class="gallery-body">
-        <div class="shot">
-          <img alt="Screenshot 3" src="https://raw.githubusercontent.com/PinoitOS/Header-Analyzer/main/3.png">
-          <div class="caption" data-i18n="shot3">Vista general del analisis.</div>
-        </div>
-        <div class="shot">
-          <img alt="Screenshot 1" src="https://raw.githubusercontent.com/PinoitOS/Header-Analyzer/main/1.png">
-          <div class="caption" data-i18n="shot1">Panel de entrada y flujo de uso.</div>
-        </div>
-        <div class="shot">
-          <img alt="Screenshot 2" src="https://raw.githubusercontent.com/PinoitOS/Header-Analyzer/main/2.png">
-          <div class="caption" data-i18n="shot2">Detalles tecnicos y secciones del reporte.</div>
-        </div>
-      </div>
-    </section>
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>ES</h3>
+      <ul>
+        <li><strong>Offline:</strong> no hay peticiones de red.</li>
+        <li><strong>.msg:</strong> no siempre se puede reconstruir la cadena Received completa.</li>
+        <li><strong>Rendimiento:</strong> archivos grandes o complejos pueden consumir CPU/memoria.</li>
+        <li><strong>Export raw:</strong> puede contener datos sensibles; comparte con cuidado.</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>EN</h3>
+      <ul>
+        <li><strong>Offline:</strong> no network requests.</li>
+        <li><strong>.msg:</strong> the full Received chain cannot always be reconstructed.</li>
+        <li><strong>Performance:</strong> large/complex files may be CPU/memory intensive.</li>
+        <li><strong>Raw export:</strong> may contain sensitive data; share carefully.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
-    <footer class="footer">
-      <div data-i18n="footerLicense">Incluye dependencias third-party (MsgReader, Apache-2.0). Ver carpeta <code>third_party/msgreader/</code>.</div>
-      <div><span data-i18n="footerVersion">Version:</span> <code>landing23</code></div>
-    </footer>
-  </main>
+<blockquote>
+  <p><strong>Nota / Note:</strong> En <code>.msg</code> puede faltar parte del trazado porque no siempre es posible reconstruir la cadena <code>Received</code> completa desde el contenedor MSG.</p>
+</blockquote>
 
-  <script>
-    (function(){
-      'use strict';
-      var current = 'es';
-      var dict = {
-        es: {
-          heroTitle: 'Analizador offline de cabeceras (.eml / .msg)',
-          heroSubtitle: 'Investiga rutas de entrega, autenticacion y senales antispam sin enviar nada a servidores: todo ocurre en tu navegador.',
-          chipOffline: '100% offline',
-          chipFormats: 'EML + MSG',
-          chipPrivate: 'Sin red / sin tracking',
-          quickFacts: 'Ficha rapida',
-          factTech: 'Tecnologias',
-          factTechValue: 'HTML + CSS + JavaScript (sin backend). MsgReader (Apache-2.0) para .msg.',
-          factRuns: 'Ejecucion',
-          factRunsValue: 'Navegador moderno (Brave/Chrome/Firefox). Sin instalacion.',
-          factSecurity: 'Seguridad',
-          factSecurityValue: 'CSP pragmatica + render con DOM/textContent para minimizar XSS.',
-          factLimit: 'Limite',
-          factLimitValue: 'Archivos grandes pueden consumir CPU/memoria (especialmente .msg).',
-          whatTitle: 'Que hace',
-          whatIntro: 'Extrae y organiza senales tecnicas habituales para acelerar el triage.',
-          what1: 'Ruta de entrega (Received): saltos, delays y anomalias.',
-          what2: 'Autenticacion: SPF / DKIM / DMARC / CompAuth (cuando existe).',
-          what3: 'Senales Microsoft: X-Forefront-Antispam-Report y X-Microsoft-Antispam.',
-          what4: 'Exportacion (PDF/JSON/TXT) y copia de IOCs.',
-          howTitle: 'Como se usa',
-          howIntro: 'Pensado para uso rapido en analisis e investigacion.',
-          how1: 'Pega cabeceras crudas o carga un archivo .eml/.msg.',
-          how2: 'Ejecuta el analisis y revisa el resumen, la ruta y las senales.',
-          how3: 'Exporta o copia IOCs si necesitas compartir hallazgos.',
-          privacyTitle: 'Privacidad',
-          privacyIntro: 'El diseno prioriza aislamiento y control local.',
-          privacy1: 'No se hacen peticiones de red (CSP: connect-src \'none\').',
-          privacy2: 'Los datos permanecen en tu navegador.',
-          privacy3: 'El export "raw" puede contener datos sensibles: usalo con cuidado.',
-          limitsTitle: 'Limitaciones',
-          limitsIntro: 'Importante para interpretar resultados correctamente.',
-          limits1: 'En .msg no siempre se puede reconstruir la cadena Received completa.',
-          limits2: 'Archivos complejos pueden tardar o consumir recursos.',
-          limits3: 'Algunas senales pueden estar ausentes segun el proveedor.',
-          shotsTitle: 'Capturas',
-          shotsHint: 'Orden: 3 -> 1 -> 2',
-          shot3: 'Vista general del analisis.',
-          shot1: 'Panel de entrada y flujo de uso.',
-          shot2: 'Detalles tecnicos y secciones del reporte.',
-          footerLicense: 'Incluye dependencias third-party (MsgReader, Apache-2.0). Ver carpeta third_party/msgreader/.',
-          footerVersion: 'Version:'
-        },
-        en: {
-          heroTitle: 'Offline email header analyzer (.eml / .msg)',
-          heroSubtitle: 'Investigate delivery routes, authentication, and antispam signals without sending anything to servers: everything runs in your browser.',
-          chipOffline: '100% offline',
-          chipFormats: 'EML + MSG',
-          chipPrivate: 'No network / no tracking',
-          quickFacts: 'Quick facts',
-          factTech: 'Tech',
-          factTechValue: 'HTML + CSS + JavaScript (no backend). MsgReader (Apache-2.0) for .msg.',
-          factRuns: 'Runs on',
-          factRunsValue: 'Modern browser (Brave/Chrome/Firefox). No install.',
-          factSecurity: 'Security',
-          factSecurityValue: 'Pragmatic CSP + DOM/textContent rendering to minimize XSS.',
-          factLimit: 'Limit',
-          factLimitValue: 'Large/complex files may consume CPU/memory (especially .msg).',
-          whatTitle: 'What it does',
-          whatIntro: 'Extracts and organizes common technical signals to speed up triage.',
-          what1: 'Delivery route (Received): hops, delays, anomalies.',
-          what2: 'Authentication: SPF / DKIM / DMARC / CompAuth (when present).',
-          what3: 'Microsoft signals: X-Forefront-Antispam-Report and X-Microsoft-Antispam.',
-          what4: 'Export (PDF/JSON/TXT) and IOC copy.',
-          howTitle: 'How to use',
-          howIntro: 'Designed for fast analysis and investigation workflows.',
-          how1: 'Paste raw headers or load an .eml/.msg file.',
-          how2: 'Run the analysis and review the summary, route, and signals.',
-          how3: 'Export or copy IOCs if you need to share findings.',
-          privacyTitle: 'Privacy',
-          privacyIntro: 'The design prioritizes isolation and local control.',
-          privacy1: 'No network requests (CSP: connect-src \'none\').',
-          privacy2: 'Data stays in your browser.',
-          privacy3: '"Raw" exports may contain sensitive data: handle with care.',
-          limitsTitle: 'Limitations',
-          limitsIntro: 'Important to interpret results correctly.',
-          limits1: 'For .msg, the full Received chain cannot always be reconstructed.',
-          limits2: 'Complex files may be slow or resource-heavy.',
-          limits3: 'Some signals may be missing depending on the provider.',
-          shotsTitle: 'Screenshots',
-          shotsHint: 'Order: 3 -> 1 -> 2',
-          shot3: 'High-level report view.',
-          shot1: 'Input panel and workflow.',
-          shot2: 'Technical details and report sections.',
-          footerLicense: 'Includes third-party dependencies (MsgReader, Apache-2.0). See third_party/msgreader/.',
-          footerVersion: 'Version:'
-        }
-      };
+<h2>Casos de uso / Use cases</h2>
 
-      function apply(lang){
-        current = (lang === 'en') ? 'en' : 'es';
-        document.documentElement.lang = current;
-        var nodes = document.querySelectorAll('[data-i18n]');
-        for (var i=0;i<nodes.length;i++){
-          var k = nodes[i].getAttribute('data-i18n');
-          if (!k) continue;
-          nodes[i].textContent = (dict[current][k] || dict.en[k] || k);
-        }
-        document.getElementById('langEs').classList.toggle('active', current === 'es');
-        document.getElementById('langEn').classList.toggle('active', current === 'en');
-      }
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>ES</h3>
+      <ul>
+        <li><strong>Soporte/Helpdesk:</strong> verificar rapido si un correo es suplantacion o un envio legitimo.</li>
+        <li><strong>SOC/IR:</strong> extraer IOCs (IPs, dominios, Message-Id) para hunting y bloqueo.</li>
+        <li><strong>M365/O365:</strong> interpretar <code>SCL</code>/<code>CAT</code>/<code>PCL</code>/<code>BCL</code> junto con SPF/DKIM/DMARC.</li>
+        <li><strong>Auditoria tecnica:</strong> revisar alineacion From/Return-Path/MAIL FROM y saltos Received.</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>EN</h3>
+      <ul>
+        <li><strong>Support/Helpdesk:</strong> quickly verify whether an email is spoofed or legitimate.</li>
+        <li><strong>SOC/IR:</strong> extract IOCs (IPs, domains, Message-Id) for hunting and blocking.</li>
+        <li><strong>M365/O365:</strong> interpret <code>SCL</code>/<code>CAT</code>/<code>PCL</code>/<code>BCL</code> together with SPF/DKIM/DMARC.</li>
+        <li><strong>Technical audit:</strong> review From/Return-Path/MAIL FROM alignment and Received hops.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
-      document.getElementById('langEs').addEventListener('click', function(){ apply('es'); });
-      document.getElementById('langEn').addEventListener('click', function(){ apply('en'); });
-      apply('es');
-    })();
-  </script>
-</body>
-</html>
+<h2>FAQ</h2>
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>ES</h3>
+      <details open>
+        <summary><strong>¿El analizador envia datos a Internet?</strong></summary>
+        <p>No. El flujo esta pensado para ejecutarse offline en el navegador. El unico riesgo de exposicion es si tu exportas/coplas datos y los compartes.</p>
+      </details>
+      <details>
+        <summary><strong>¿Por que mi .msg no muestra todos los Received?</strong></summary>
+        <p>El contenedor MSG no siempre permite reconstruir toda la cadena Received. Por eso el reporte indica que la traza puede estar incompleta.</p>
+      </details>
+      <details>
+        <summary><strong>¿Como interpreto un DMARC fail?</strong></summary>
+        <p>Un <code>DMARC=fail</code> con desalineacion (From vs MAIL FROM/Return-Path) es una senal fuerte de suplantacion, especialmente si el dominio aplica politica.</p>
+      </details>
+      <details>
+        <summary><strong>¿Que significa Risk Score?</strong></summary>
+        <p>Es una heuristica orientativa (no una prueba criptografica). Sirve para priorizar revision; valida siempre con el contexto y evidencias.</p>
+      </details>
+      <details>
+        <summary><strong>¿Que export deberia usar?</strong></summary>
+        <p><strong>PDF</strong> para compartir visualmente, <strong>JSON</strong> para automatizar, <strong>TXT</strong> para tickets. El JSON "raw" puede contener datos sensibles.</p>
+      </details>
+    </td>
+    <td width="50%" valign="top">
+      <h3>EN</h3>
+      <details open>
+        <summary><strong>Does the analyzer send data to the Internet?</strong></summary>
+        <p>No. The workflow is designed to run offline in the browser. The main exposure risk is exporting/copying data and sharing it.</p>
+      </details>
+      <details>
+        <summary><strong>Why does my .msg miss some Received headers?</strong></summary>
+        <p>The MSG container does not always allow reconstructing the full Received chain. The report explicitly notes the trace may be incomplete.</p>
+      </details>
+      <details>
+        <summary><strong>How should I interpret DMARC fail?</strong></summary>
+        <p>A <code>DMARC=fail</code> with misalignment (From vs MAIL FROM/Return-Path) is a strong spoofing signal, especially when the domain enforces policy.</p>
+      </details>
+      <details>
+        <summary><strong>What is Risk Score?</strong></summary>
+        <p>An indicative heuristic (not cryptographic proof). Use it to prioritize review, and validate with context and evidence.</p>
+      </details>
+      <details>
+        <summary><strong>Which export should I use?</strong></summary>
+        <p><strong>PDF</strong> for human sharing, <strong>JSON</strong> for automation, <strong>TXT</strong> for tickets. "Raw" JSON may contain sensitive data.</p>
+      </details>
+    </td>
+  </tr>
+</table>
+
+<hr>
+
+<h2>Capturas / Screenshots</h2>
+<p><em>Orden / Order:</em> 3 &rarr; 1 &rarr; 2</p>
+
+<p>
+  <img alt="Screenshot 3" src="https://raw.githubusercontent.com/PinoitOS/Header-Analyzer/main/3.png" width="100%" />
+</p>
+<p>
+  <img alt="Screenshot 1" src="https://raw.githubusercontent.com/PinoitOS/Header-Analyzer/main/1.png" width="100%" />
+</p>
+<p>
+  <img alt="Screenshot 2" src="https://raw.githubusercontent.com/PinoitOS/Header-Analyzer/main/2.png" width="100%" />
+</p>
+
+<hr>
+
+<p><strong>Licencia / License:</strong> Incluye MsgReader (Apache-2.0). Ver <code>third_party/msgreader/</code>.</p>
