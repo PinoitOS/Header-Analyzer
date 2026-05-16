@@ -301,7 +301,6 @@
 <hr>
 
 <h2>Capturas / Screenshots</h2>
-<p><em>Orden / Order:</em> 3 &rarr; 1 &rarr; 2</p>
 
 <p>
   <img alt="Screenshot 3" src="https://raw.githubusercontent.com/PinoitOS/Header-Analyzer/main/3.png" width="100%" />
