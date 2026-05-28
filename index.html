@@ -1127,7 +1127,7 @@ X-Mailer: Campaign Platform 4.2`
 
             Object.assign(translations.es, {
                 reputationTitle: 'Reputacion (online)',
-                reputationNote: 'No enviamos el contenido del correo. Solo consultamos IPs/hosts/dominios extraidos. Resultados cacheados solo en esta sesion (se borran al cerrar la pestana).',
+                reputationNote: 'No enviamos el contenido del correo. Solo consultamos IPs/hosts/dominios/URLs extraidos. Resultados cacheados solo en esta sesion (se borran al cerrar la pestana).',
                 reputationLoading: 'Consultando reputacion...',
                 reputationError: 'Error consultando reputacion',
                 reputationNoData: 'No hay entidades suficientes para consultar.',
@@ -1145,7 +1145,7 @@ X-Mailer: Campaign Platform 4.2`
             });
             Object.assign(translations.en, {
                 reputationTitle: 'Reputation (online)',
-                reputationNote: 'We do not send email content. We only query extracted IPs/hosts/domains. Results are cached only for this browser session (cleared when you close the tab).',
+                reputationNote: 'We do not send email content. We only query extracted IPs/hosts/domains/URLs. Results are cached only for this browser session (cleared when you close the tab).',
                 reputationLoading: 'Querying reputation...',
                 reputationError: 'Reputation query failed',
                 reputationNoData: 'Not enough entities to query.',
@@ -4329,9 +4329,11 @@ X-Mailer: Campaign Platform 4.2`
                 var ips = [];
                 var hosts = [];
                 var domains = [];
+                var urls = [];
                 var seenIps = Object.create(null);
                 var seenHosts = Object.create(null);
                 var seenDomains = Object.create(null);
+                var seenUrls = Object.create(null);
 
                 var spfData = data.spfData || {};
                 var hops = Array.isArray(data.receivedHops) ? data.receivedHops : [];
@@ -4375,6 +4377,17 @@ X-Mailer: Campaign Platform 4.2`
                 addUnique(domains, seenDomains, data.mailFromDomain);
                 addUnique(domains, seenDomains, data.dkimData && data.dkimData.domain);
 
+                // URLs from viewer (EML/MSG body) - max 15
+                try {
+                    var viewerIocs = collectViewerIocs(currentViewerMessage);
+                    if (Array.isArray(viewerIocs)) {
+                        for (var ui = 0; ui < viewerIocs.length; ui++) {
+                            var v = String(viewerIocs[ui] || '').trim();
+                            if (/^https?:\/\//i.test(v)) addUnique(urls, seenUrls, v);
+                        }
+                    }
+                } catch (e) {}
+
                 var auth = {
                     spf: (data.authResults && data.authResults.spf) || 'none',
                     dkim: (data.authResults && data.authResults.dkim) || 'none',
@@ -4387,13 +4400,14 @@ X-Mailer: Campaign Platform 4.2`
                 ips = ips.slice(0, 12);
                 hosts = hosts.slice(0, 12);
                 domains = domains.slice(0, 12);
+                urls = urls.slice(0, 15);
 
-                if (!ips.length && !hosts.length && !domains.length) {
+                if (!ips.length && !hosts.length && !domains.length && !urls.length) {
                     statusEl.textContent = t('reputationNoData');
                     return;
                 }
 
-                var cacheKey = 'rep:v1:' + [main.ip || '', main.fromDomain || '', main.mailFromDomain || '', auth.spf, auth.dkim, auth.dmarc].join('|');
+                var cacheKey = 'rep:v2:' + [main.ip || '', main.fromDomain || '', main.mailFromDomain || '', auth.spf, auth.dkim, auth.dmarc, 'u:' + urls.join(',')].join('|');
                 try {
                     var cached = sessionStorage.getItem(cacheKey);
                     if (cached) {
@@ -4407,7 +4421,7 @@ X-Mailer: Campaign Platform 4.2`
                 fetch(REPUTATION_API_BASE + '/api/reputation', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ips: ips, hosts: hosts, domains: domains, context: { auth: auth, ms: ms, main: main } })
+                    body: JSON.stringify({ ips: ips, hosts: hosts, domains: domains, urls: urls, context: { auth: auth, ms: ms, main: main } })
                 }).then(function(r) {
                     return r.json();
                 }).then(function(rep) {
@@ -4425,6 +4439,27 @@ X-Mailer: Campaign Platform 4.2`
                 if (!rep || !Array.isArray(rep.items) || !rep.items.length) {
                     statusEl.textContent = t('reputationNoData');
                     return;
+                }
+
+                if (rep && rep.globalSeverity) {
+                    var wrap = document.createElement('div');
+                    wrap.setAttribute('style', 'margin-top:0.5rem');
+                    var label = document.createElement('span');
+                    label.textContent = (currentLang === 'es' ? 'Global: ' : 'Global: ');
+                    var sev = String(rep.globalSeverity || '').toLowerCase();
+                    var badge = document.createElement('span');
+                    badge.className = 'badge badge-' + reputationBadgeClass(sev);
+                    badge.textContent = t('sev_' + sev) || sev;
+                    wrap.appendChild(label);
+                    wrap.appendChild(badge);
+                    if (Array.isArray(rep.globalReasons) && rep.globalReasons.length) {
+                        var rr = document.createElement('div');
+                        rr.className = 'field-desc';
+                        rr.setAttribute('style', 'margin-top:0.25rem');
+                        rr.textContent = rep.globalReasons.join(' | ');
+                        wrap.appendChild(rr);
+                    }
+                    statusEl.appendChild(wrap);
                 }
                 for (var i = 0; i < rep.items.length; i++) {
                     var it = rep.items[i];
@@ -4546,7 +4581,8 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index35';
+            const APP_VERSION = 'index36';
+
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
 
