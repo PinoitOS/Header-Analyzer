@@ -293,6 +293,29 @@
         .att-name { font-size: 0.76rem; color: var(--text); word-break: break-word; font-weight: 800; }
         .att-meta { font-size: 0.70rem; color: var(--text-muted); }
         .att-actions { display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end; }
+
+        /* Reputation (online) - UI polish */
+        .rep-table td { font-family: 'Segoe UI', 'Trebuchet MS', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .rep-table td:first-child { background: transparent; width: auto; }
+        .rep-entity { font-family: 'Cascadia Mono', 'Consolas', monospace; font-size: 0.76rem; color: var(--text); word-break: break-word; }
+        .rep-entity-sub { margin-top: 0.25rem; display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap; }
+        .rep-type-pill { display: inline-flex; align-items: center; justify-content: center; padding: 0.12rem 0.5rem; border-radius: 999px; border: 1px solid var(--border); font-size: 0.62rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); background: rgba(255,255,255,0.04); }
+        .rep-reasons { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.76rem; line-height: 1.45; color: var(--text); }
+        .rep-reason { padding-left: 0.55rem; position: relative; }
+        .rep-reason:before { content: ''; position: absolute; left: 0; top: 0.55rem; width: 6px; height: 6px; border-radius: 999px; background: rgba(25,199,212,0.55); }
+        .rep-sources { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+        .rep-source-pill { border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--primary); border-radius: 999px; padding: 0.24rem 0.55rem; font-size: 0.72rem; font-weight: 850; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; }
+        .rep-source-pill:hover { border-color: var(--primary); box-shadow: 0 0 0 3px var(--glow); transform: translateY(-1px); }
+        .rep-global { margin-top: 0.7rem; border: 1px solid var(--border); border-radius: 12px; padding: 0.7rem 0.75rem; background: rgba(7,11,24,0.42); }
+        .light .rep-global { background: #f8fbff; }
+        .rep-global-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        .rep-global-title { font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.72rem; color: var(--text-muted); }
+        .rep-updated { margin-top: 0.25rem; }
+
+        @media (max-width: 900px) {
+            .rep-table th, .rep-table td { padding: 0.7rem 0.65rem; }
+            .rep-reasons { font-size: 0.74rem; }
+        }
     </style>
 </head>
 <body>
@@ -313,6 +336,7 @@
         <button class="btn btn-secondary" id="topJsonBtn" type="button">Export JSON</button>
         <button class="btn btn-secondary" id="topJsonRawBtn" type="button">Export JSON (include raw)</button>
         <button class="btn btn-secondary" id="topIocsBtn" type="button">Copy IOCs</button>
+        <button class="btn btn-secondary" id="topViewerLinksBtn" type="button">Copy Email Links</button>
         <button class="btn btn-secondary" id="reportClearBtn">Clear</button>
     </div>
     <main class="main">
@@ -372,8 +396,7 @@
                                     <button class="btn btn-secondary" id="viewerShowHtmlBtn" type="button">HTML</button>
                                     <button class="btn btn-secondary" id="viewerShowTextBtn" type="button">Text</button>
                                     <button class="btn btn-secondary" id="viewerRemoteToggleBtn" type="button">Remote: OFF</button>
-                                    <button class="btn btn-secondary" id="viewerCopyIocsBtn" type="button">Copy Email Links</button>
-                                    <div class="viewer-small" id="viewerCopyIocsHint" style="align-self:center;opacity:0.9;">(URLs, domains, emails, IPs)</div>
+                                    <div class="viewer-small" id="viewerCopyIocsHint" style="align-self:center;opacity:0.9;"></div>
                                 </div>
                                 <div class="viewer-small" id="viewerWarnings"></div>
                                 <div class="viewer-small" id="viewerRemoteLegend"></div>
@@ -1495,9 +1518,10 @@ X-Mailer: Campaign Platform 4.2`
                 document.getElementById('attachmentsTitle').textContent = t('viewerAttachments');
                 document.getElementById('viewerShowHtmlBtn').textContent = t('viewerHtml');
                 document.getElementById('viewerShowTextBtn').textContent = t('viewerText');
-                document.getElementById('viewerCopyIocsBtn').textContent = t('viewerCopyIocs');
+                var topLinksBtn = document.getElementById('topViewerLinksBtn');
+                if (topLinksBtn) topLinksBtn.textContent = t('viewerCopyIocs');
                 var hint = document.getElementById('viewerCopyIocsHint');
-                if (hint) hint.textContent = currentLang === 'es' ? '(URLs, dominios, emails, IPs)' : '(URLs, domains, emails, IPs)';
+                if (hint) hint.textContent = '';
                 updateRemoteToggleLabel();
                 updateRemoteLegend();
 
@@ -2354,11 +2378,11 @@ X-Mailer: Campaign Platform 4.2`
                 updateRemoteLegend();
                 renderViewerBody();
             });
-            document.getElementById('viewerCopyIocsBtn').addEventListener('click', function() {
+            document.getElementById('topViewerLinksBtn').addEventListener('click', function() {
                 var iocs = collectViewerIocs(currentViewerMessage);
                 copyTextToClipboard(iocs.join('\n'));
 
-                var btn = document.getElementById('viewerCopyIocsBtn');
+                var btn = document.getElementById('topViewerLinksBtn');
                 if (btn) {
                     btn.textContent = t('copied') + '!';
                     setTimeout(function() { btn.textContent = t('viewerCopyIocs'); }, 1800);
@@ -2383,7 +2407,7 @@ X-Mailer: Campaign Platform 4.2`
                 var table = document.createElement('table');
                 table.className = 'link-table';
                 var thead = document.createElement('thead');
-                thead.innerHTML = '<tr><th>ID</th><th>' + (currentLang === 'es' ? 'Contexto' : 'Context') + '</th><th>' + (currentLang === 'es' ? 'Visible' : 'Visible') + '</th><th>Href</th><th>' + (currentLang === 'es' ? 'Senales (heuristicas)' : 'Signals (heuristics)') + '</th><th>' + (currentLang === 'es' ? 'Copiar' : 'Copy') + '</th></tr>';
+                thead.innerHTML = '<tr><th>ID</th><th>' + (currentLang === 'es' ? 'Contexto' : 'Context') + '</th><th>' + (currentLang === 'es' ? 'Visible' : 'Visible') + '</th><th>Href</th><th>' + (currentLang === 'es' ? 'Senales (heuristicas)' : 'Signals (heuristics)') + '</th><th>' + (currentLang === 'es' ? 'Reputacion' : 'Reputation') + '</th><th>' + (currentLang === 'es' ? 'Copiar' : 'Copy') + '</th></tr>';
                 table.appendChild(thead);
                 var tbody = document.createElement('tbody');
                 for (var i = 0; i < links.length; i++) {
@@ -2413,6 +2437,15 @@ X-Mailer: Campaign Platform 4.2`
                     tr.appendChild(tdH);
                     tr.appendChild(tdS);
 
+                    var tdRep = document.createElement('td');
+                    tdRep.className = 'rep-cell';
+                    tdRep.setAttribute('data-url', l.href || '');
+                    var ph = document.createElement('span');
+                    ph.className = 'field-desc';
+                    ph.textContent = '...';
+                    tdRep.appendChild(ph);
+                    tr.appendChild(tdRep);
+
                     var tdA = document.createElement('td');
                     var btn = document.createElement('button');
                     btn.type = 'button';
@@ -2426,6 +2459,93 @@ X-Mailer: Campaign Platform 4.2`
                 }
                 table.appendChild(tbody);
                 body.appendChild(table);
+
+                // Enrich links with online reputation (URL items)
+                try { startViewerLinksReputation(links, tbody); } catch (e) {}
+            }
+
+            function startViewerLinksReputation(links, tbodyEl) {
+                if (!tbodyEl) return;
+                if (!Array.isArray(links) || !links.length) return;
+
+                var urls = [];
+                var seen = Object.create(null);
+                for (var i = 0; i < links.length; i++) {
+                    var u = String((links[i] && links[i].href) || '').trim();
+                    if (!/^https?:\/\//i.test(u)) continue;
+                    var k = u.toLowerCase();
+                    if (seen[k]) continue;
+                    seen[k] = true;
+                    urls.push(u);
+                    if (urls.length >= 15) break;
+                }
+                if (!urls.length) {
+                    // Clear placeholders
+                    var cells = tbodyEl.querySelectorAll('td.rep-cell');
+                    for (var ci = 0; ci < cells.length; ci++) cells[ci].textContent = '-';
+                    return;
+                }
+
+                var cacheKey = 'rep:viewer:v2:' + urls.join('|');
+                try {
+                    var cached = sessionStorage.getItem(cacheKey);
+                    if (cached) {
+                        applyViewerUrlRep(JSON.parse(cached), tbodyEl);
+                        return;
+                    }
+                } catch (e) {}
+
+                fetch(REPUTATION_API_BASE + '/api/reputation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ urls: urls, context: { auth: (currentReportData && currentReportData.authResults) ? { spf: currentReportData.authResults.spf, dkim: currentReportData.authResults.dkim, dmarc: currentReportData.authResults.dmarc } : {} } })
+                }).then(function(r) {
+                    return r.json();
+                }).then(function(rep) {
+                    try { sessionStorage.setItem(cacheKey, JSON.stringify(rep)); } catch (e) {}
+                    applyViewerUrlRep(rep, tbodyEl);
+                }).catch(function() {
+                    var cells = tbodyEl.querySelectorAll('td.rep-cell');
+                    for (var ci = 0; ci < cells.length; ci++) cells[ci].textContent = '-';
+                });
+            }
+
+            function applyViewerUrlRep(rep, tbodyEl) {
+                if (!tbodyEl) return;
+                var map = Object.create(null);
+                try {
+                    if (rep && Array.isArray(rep.items)) {
+                        for (var i = 0; i < rep.items.length; i++) {
+                            var it = rep.items[i];
+                            if (!it || String(it.type || '').toLowerCase() !== 'url') continue;
+                            var key = String(it.entity || '').trim().toLowerCase();
+                            if (!key) continue;
+                            map[key] = it;
+                        }
+                    }
+                } catch (e) {}
+
+                var cells = tbodyEl.querySelectorAll('td.rep-cell');
+                for (var ci = 0; ci < cells.length; ci++) {
+                    var cell = cells[ci];
+                    var u = String(cell.getAttribute('data-url') || '').trim();
+                    var key = u.toLowerCase();
+                    var it = map[key];
+                    cell.textContent = '';
+                    if (!it) {
+                        var empty = document.createElement('span');
+                        empty.className = 'field-desc';
+                        empty.textContent = '-';
+                        cell.appendChild(empty);
+                        continue;
+                    }
+
+                    var sev = String(it.severity || '').toLowerCase();
+                    var badge = document.createElement('span');
+                    badge.className = 'badge badge-' + reputationBadgeClass(sev);
+                    badge.textContent = t('sev_' + sev) || sev;
+                    cell.appendChild(badge);
+                }
             }
 
             function formatBytes(n) {
@@ -3488,10 +3608,10 @@ X-Mailer: Campaign Platform 4.2`
                     c.body.appendChild(status);
 
                     const table = document.createElement('table');
-                    table.className = 'analysis-table';
+                    table.className = 'analysis-table rep-table';
                     table.id = 'reputationTable';
                     const thead = document.createElement('thead');
-                    thead.innerHTML = '<tr><th>' + escapeHtml(t('repEntity')) + '</th><th>' + escapeHtml(t('repType')) + '</th><th>' + escapeHtml(t('repSeverity')) + '</th><th>' + escapeHtml(t('repReasons')) + '</th><th>' + escapeHtml(t('repSources')) + '</th></tr>';
+                    thead.innerHTML = '<tr><th>' + escapeHtml(t('repEntity')) + '</th><th>' + escapeHtml(t('repSeverity')) + '</th><th>' + escapeHtml(t('repReasons')) + '</th><th>' + escapeHtml(t('repSources')) + '</th></tr>';
                     table.appendChild(thead);
                     const tbody = document.createElement('tbody');
                     table.appendChild(tbody);
@@ -4443,34 +4563,85 @@ X-Mailer: Campaign Platform 4.2`
 
                 if (rep && rep.globalSeverity) {
                     var wrap = document.createElement('div');
-                    wrap.setAttribute('style', 'margin-top:0.5rem');
-                    var label = document.createElement('span');
-                    label.textContent = (currentLang === 'es' ? 'Global: ' : 'Global: ');
+                    wrap.className = 'rep-global';
+
+                    var row = document.createElement('div');
+                    row.className = 'rep-global-row';
+
+                    var label = document.createElement('div');
+                    label.className = 'rep-global-title';
+                    label.textContent = (currentLang === 'es' ? 'Global' : 'Global');
                     var sev = String(rep.globalSeverity || '').toLowerCase();
                     var badge = document.createElement('span');
                     badge.className = 'badge badge-' + reputationBadgeClass(sev);
                     badge.textContent = t('sev_' + sev) || sev;
-                    wrap.appendChild(label);
-                    wrap.appendChild(badge);
+
+                    row.appendChild(label);
+                    row.appendChild(badge);
+                    wrap.appendChild(row);
                     if (Array.isArray(rep.globalReasons) && rep.globalReasons.length) {
                         var rr = document.createElement('div');
                         rr.className = 'field-desc';
-                        rr.setAttribute('style', 'margin-top:0.25rem');
                         rr.textContent = rep.globalReasons.join(' | ');
                         wrap.appendChild(rr);
                     }
+
+                    if (rep.generatedAt) {
+                        var up = document.createElement('div');
+                        up.className = 'field-desc rep-updated';
+                        var d = new Date(String(rep.generatedAt));
+                        up.textContent = (currentLang === 'es' ? 'Actualizado: ' : 'Updated: ') + (isFinite(d.getTime()) ? d.toLocaleString() : String(rep.generatedAt));
+                        wrap.appendChild(up);
+                    }
                     statusEl.appendChild(wrap);
                 }
-                for (var i = 0; i < rep.items.length; i++) {
-                    var it = rep.items[i];
+
+                function sevRank(s) {
+                    s = String(s || '').toLowerCase();
+                    if (s === 'potentially_malicious') return 5;
+                    if (s === 'high') return 4;
+                    if (s === 'medium') return 3;
+                    if (s === 'low') return 2;
+                    if (s === 'trustworthy') return 1;
+                    return 3;
+                }
+                function typeRank(t) {
+                    t = String(t || '').toLowerCase();
+                    if (t === 'url') return 1;
+                    if (t === 'host' || t === 'domain') return 2;
+                    if (t === 'ip') return 3;
+                    return 4;
+                }
+
+                var items = rep.items.slice();
+                items.sort(function(a, b) {
+                    var sa = sevRank(a && a.severity);
+                    var sb = sevRank(b && b.severity);
+                    if (sa !== sb) return sb - sa;
+                    var ta = typeRank(a && a.type);
+                    var tb = typeRank(b && b.type);
+                    if (ta !== tb) return ta - tb;
+                    var ea = String((a && a.entity) || '').toLowerCase();
+                    var eb = String((b && b.entity) || '').toLowerCase();
+                    return ea.localeCompare(eb);
+                });
+
+                for (var i = 0; i < items.length; i++) {
+                    var it = items[i];
                     var tr = document.createElement('tr');
 
-                    var tdE = document.createElement('td');
-                    tdE.className = 'no-translate';
-                    tdE.textContent = it.entity || '';
-
-                    var tdT = document.createElement('td');
-                    tdT.textContent = it.type || '';
+                    var tdEntity = document.createElement('td');
+                    var eTop = document.createElement('div');
+                    eTop.className = 'rep-entity no-translate';
+                    eTop.textContent = it.entity || '';
+                    var eSub = document.createElement('div');
+                    eSub.className = 'rep-entity-sub';
+                    var typePill = document.createElement('span');
+                    typePill.className = 'rep-type-pill';
+                    typePill.textContent = String(it.type || '').toUpperCase() || '-';
+                    eSub.appendChild(typePill);
+                    tdEntity.appendChild(eTop);
+                    tdEntity.appendChild(eSub);
 
                     var tdS = document.createElement('td');
                     var sev = String(it.severity || '').toLowerCase();
@@ -4480,25 +4651,42 @@ X-Mailer: Campaign Platform 4.2`
                     tdS.appendChild(badge);
 
                     var tdR = document.createElement('td');
-                    tdR.textContent = Array.isArray(it.reasons) ? it.reasons.join(' | ') : '';
+                    if (Array.isArray(it.reasons) && it.reasons.length) {
+                        var rWrap = document.createElement('div');
+                        rWrap.className = 'rep-reasons';
+                        for (var ri = 0; ri < it.reasons.length; ri++) {
+                            var line = document.createElement('div');
+                            line.className = 'rep-reason';
+                            line.textContent = String(it.reasons[ri] == null ? '' : it.reasons[ri]);
+                            rWrap.appendChild(line);
+                        }
+                        tdR.appendChild(rWrap);
+                    } else {
+                        var empty = document.createElement('span');
+                        empty.className = 'field-desc';
+                        empty.textContent = 'Empty';
+                        tdR.appendChild(empty);
+                    }
 
                     var tdSrc = document.createElement('td');
                     if (Array.isArray(it.sources)) {
+                        var sWrap = document.createElement('div');
+                        sWrap.className = 'rep-sources';
                         for (var si = 0; si < it.sources.length; si++) {
-                            if (si) tdSrc.appendChild(document.createTextNode(' '));
                             var s = it.sources[si];
                             if (!s || !s.url) continue;
                             var a = document.createElement('a');
+                            a.className = 'rep-source-pill';
                             a.href = String(s.url);
                             a.target = '_blank';
                             a.rel = 'noopener noreferrer';
-                            a.textContent = (s.name ? (s.name + ': ') : '') + t('repOpen');
-                            tdSrc.appendChild(a);
+                            a.textContent = s.name ? String(s.name) : t('repOpen');
+                            sWrap.appendChild(a);
                         }
+                        tdSrc.appendChild(sWrap);
                     }
 
-                    tr.appendChild(tdE);
-                    tr.appendChild(tdT);
+                    tr.appendChild(tdEntity);
                     tr.appendChild(tdS);
                     tr.appendChild(tdR);
                     tr.appendChild(tdSrc);
@@ -4581,7 +4769,7 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index36';
+            const APP_VERSION = 'index38';
 
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
