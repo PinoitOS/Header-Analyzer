@@ -1076,6 +1076,7 @@ X-Mailer: Campaign Platform 4.2`
             const MAX_INPUT_CHARS = 100000;
             const MAX_REPORT_TEXT_CHARS = 250000;
             const REDACTED_VALUE = '[redacted]';
+            const REPUTATION_API_BASE = 'https://pinoitos-headers-analyzer.analisis-forense-96.workers.dev';
             let currentLang = localStorage.getItem('lang') || 'es';
             const translations = {
                 es: {
@@ -1123,6 +1124,43 @@ X-Mailer: Campaign Platform 4.2`
             translations.en.viewerCopyIocs = 'Copy Email Links';
             translations.es.copiedIocs = 'Datos de cabeceras copiados';
             translations.en.copiedIocs = 'Header data copied';
+
+            Object.assign(translations.es, {
+                reputationTitle: 'Reputacion (online)',
+                reputationNote: 'No enviamos el contenido del correo. Solo consultamos IPs/hosts/dominios extraidos. Resultados cacheados solo en esta sesion (se borran al cerrar la pestana).',
+                reputationLoading: 'Consultando reputacion...',
+                reputationError: 'Error consultando reputacion',
+                reputationNoData: 'No hay entidades suficientes para consultar.',
+                repEntity: 'Entidad',
+                repType: 'Tipo',
+                repSeverity: 'Severidad',
+                repReasons: 'Motivos',
+                repSources: 'Fuentes',
+                repOpen: 'Abrir',
+                sev_trustworthy: 'Confiable',
+                sev_low: 'Baja',
+                sev_medium: 'Media',
+                sev_high: 'Alta',
+                sev_potentially_malicious: 'Potencialmente malicioso'
+            });
+            Object.assign(translations.en, {
+                reputationTitle: 'Reputation (online)',
+                reputationNote: 'We do not send email content. We only query extracted IPs/hosts/domains. Results are cached only for this browser session (cleared when you close the tab).',
+                reputationLoading: 'Querying reputation...',
+                reputationError: 'Reputation query failed',
+                reputationNoData: 'Not enough entities to query.',
+                repEntity: 'Entity',
+                repType: 'Type',
+                repSeverity: 'Severity',
+                repReasons: 'Reasons',
+                repSources: 'Sources',
+                repOpen: 'Open',
+                sev_trustworthy: 'Trustworthy',
+                sev_low: 'Low',
+                sev_medium: 'Medium',
+                sev_high: 'High',
+                sev_potentially_malicious: 'Potentially malicious'
+            });
 
             const phraseTranslations = {
                 es: {
@@ -3433,6 +3471,48 @@ X-Mailer: Campaign Platform 4.2`
 
                 container.appendChild(buildAnalystSummaryDom(analystSummary));
 
+                // Online reputation (via Cloudflare Worker)
+                (function() {
+                    const c = createCard('info', 'R', t('reputationTitle'), 'table-card-body');
+                    c.card.id = 'reputationCard';
+
+                    const note = document.createElement('div');
+                    note.className = 'field-desc';
+                    note.textContent = t('reputationNote');
+                    c.body.appendChild(note);
+
+                    const status = document.createElement('div');
+                    status.id = 'reputationStatus';
+                    status.setAttribute('style', 'margin-top:0.6rem');
+                    status.textContent = t('reputationLoading');
+                    c.body.appendChild(status);
+
+                    const table = document.createElement('table');
+                    table.className = 'analysis-table';
+                    table.id = 'reputationTable';
+                    const thead = document.createElement('thead');
+                    thead.innerHTML = '<tr><th>' + escapeHtml(t('repEntity')) + '</th><th>' + escapeHtml(t('repType')) + '</th><th>' + escapeHtml(t('repSeverity')) + '</th><th>' + escapeHtml(t('repReasons')) + '</th><th>' + escapeHtml(t('repSources')) + '</th></tr>';
+                    table.appendChild(thead);
+                    const tbody = document.createElement('tbody');
+                    table.appendChild(tbody);
+                    c.body.appendChild(table);
+
+                    // Start lookup (cached in sessionStorage)
+                    try {
+                        startReputationLookup({
+                            authResults: authResults,
+                            spfData: spfData,
+                            dkimData: dkimData,
+                            receivedHops: receivedHops,
+                            antiSpamData: antiSpamData,
+                            headerFromDomain: headerFromDomain,
+                            mailFromDomain: mailFromDomain
+                        }, status, tbody);
+                    } catch (e) {
+                        status.textContent = t('reputationError');
+                    }
+                })();
+
                 // Security Findings (table built with DOM)
                 (function() {
                     const c = createCard('default', (currentLang === 'es' ? 'H' : 'S'), 'Security Findings', 'table-card-body');
@@ -4232,6 +4312,184 @@ X-Mailer: Campaign Platform 4.2`
                     if (item.key === 'PTR' || item.key === 'H') add('heloPtr', item.value);
                 }
                 return buckets;
+            }
+
+            function startReputationLookup(data, statusEl, tbodyEl) {
+                if (!statusEl || !tbodyEl || !data) return;
+
+                function addUnique(arr, seen, v) {
+                    v = String(v == null ? '' : v).trim();
+                    if (!v) return;
+                    var k = v.toLowerCase();
+                    if (seen[k]) return;
+                    seen[k] = true;
+                    arr.push(v);
+                }
+
+                var ips = [];
+                var hosts = [];
+                var domains = [];
+                var seenIps = Object.create(null);
+                var seenHosts = Object.create(null);
+                var seenDomains = Object.create(null);
+
+                var spfData = data.spfData || {};
+                var hops = Array.isArray(data.receivedHops) ? data.receivedHops : [];
+                var anti = Array.isArray(data.antiSpamData) ? data.antiSpamData : [];
+
+                // Main IP: CIP -> client-ip -> first public hop IP
+                var cip = null;
+                var ptr = null;
+                var scl = null;
+                var cat = null;
+                var ipv = null;
+                for (var i = 0; i < anti.length; i++) {
+                    if (anti[i].key === 'CIP' && anti[i].value) cip = String(anti[i].value);
+                    if (anti[i].key === 'PTR' && anti[i].value) ptr = String(anti[i].value);
+                    if (anti[i].key === 'SCL' && anti[i].value != null) scl = anti[i].value;
+                    if (anti[i].key === 'CAT' && anti[i].value) cat = String(anti[i].value);
+                    if (anti[i].key === 'IPV' && anti[i].value) ipv = String(anti[i].value);
+                }
+                var mainIp = (cip || spfData.clientIp || null);
+                if (!mainIp) {
+                    for (var hi = 0; hi < hops.length; hi++) {
+                        var hip = hops[hi] && hops[hi].ip;
+                        if (hip && !isPrivateIp(String(hip))) { mainIp = String(hip); break; }
+                    }
+                }
+
+                if (mainIp) addUnique(ips, seenIps, mainIp);
+                addUnique(ips, seenIps, spfData.clientIp);
+                for (var hi2 = 0; hi2 < hops.length; hi2++) addUnique(ips, seenIps, hops[hi2] && hops[hi2].ip);
+
+                // Hosts
+                addUnique(hosts, seenHosts, spfData.helo);
+                addUnique(hosts, seenHosts, ptr);
+                for (var hh = 0; hh < hops.length; hh++) {
+                    addUnique(hosts, seenHosts, hops[hh] && hops[hh].from);
+                    addUnique(hosts, seenHosts, hops[hh] && hops[hh].by);
+                }
+
+                // Domains
+                addUnique(domains, seenDomains, data.headerFromDomain);
+                addUnique(domains, seenDomains, data.mailFromDomain);
+                addUnique(domains, seenDomains, data.dkimData && data.dkimData.domain);
+
+                var auth = {
+                    spf: (data.authResults && data.authResults.spf) || 'none',
+                    dkim: (data.authResults && data.authResults.dkim) || 'none',
+                    dmarc: (data.authResults && data.authResults.dmarc) || 'none'
+                };
+                var ms = { scl: scl, cat: cat, ipv: ipv, ptr: ptr };
+                var main = { ip: mainIp || null, fromDomain: data.headerFromDomain || null, mailFromDomain: data.mailFromDomain || null };
+
+                // Trim sizes (keep within free tier + fast UI)
+                ips = ips.slice(0, 12);
+                hosts = hosts.slice(0, 12);
+                domains = domains.slice(0, 12);
+
+                if (!ips.length && !hosts.length && !domains.length) {
+                    statusEl.textContent = t('reputationNoData');
+                    return;
+                }
+
+                var cacheKey = 'rep:v1:' + [main.ip || '', main.fromDomain || '', main.mailFromDomain || '', auth.spf, auth.dkim, auth.dmarc].join('|');
+                try {
+                    var cached = sessionStorage.getItem(cacheKey);
+                    if (cached) {
+                        var parsed = JSON.parse(cached);
+                        renderReputationResult(parsed, statusEl, tbodyEl);
+                        return;
+                    }
+                } catch (e) {}
+
+                statusEl.textContent = t('reputationLoading');
+                fetch(REPUTATION_API_BASE + '/api/reputation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ips: ips, hosts: hosts, domains: domains, context: { auth: auth, ms: ms, main: main } })
+                }).then(function(r) {
+                    return r.json();
+                }).then(function(rep) {
+                    try { sessionStorage.setItem(cacheKey, JSON.stringify(rep)); } catch (e) {}
+                    renderReputationResult(rep, statusEl, tbodyEl);
+                }).catch(function(err) {
+                    statusEl.textContent = t('reputationError');
+                });
+            }
+
+            function renderReputationResult(rep, statusEl, tbodyEl) {
+                if (!statusEl || !tbodyEl) return;
+                statusEl.textContent = '';
+                tbodyEl.textContent = '';
+                if (!rep || !Array.isArray(rep.items) || !rep.items.length) {
+                    statusEl.textContent = t('reputationNoData');
+                    return;
+                }
+                for (var i = 0; i < rep.items.length; i++) {
+                    var it = rep.items[i];
+                    var tr = document.createElement('tr');
+
+                    var tdE = document.createElement('td');
+                    tdE.className = 'no-translate';
+                    tdE.textContent = it.entity || '';
+
+                    var tdT = document.createElement('td');
+                    tdT.textContent = it.type || '';
+
+                    var tdS = document.createElement('td');
+                    var sev = String(it.severity || '').toLowerCase();
+                    var badge = document.createElement('span');
+                    badge.className = 'badge badge-' + reputationBadgeClass(sev);
+                    badge.textContent = t('sev_' + sev) || sev;
+                    tdS.appendChild(badge);
+
+                    var tdR = document.createElement('td');
+                    tdR.textContent = Array.isArray(it.reasons) ? it.reasons.join(' | ') : '';
+
+                    var tdSrc = document.createElement('td');
+                    if (Array.isArray(it.sources)) {
+                        for (var si = 0; si < it.sources.length; si++) {
+                            if (si) tdSrc.appendChild(document.createTextNode(' '));
+                            var s = it.sources[si];
+                            if (!s || !s.url) continue;
+                            var a = document.createElement('a');
+                            a.href = String(s.url);
+                            a.target = '_blank';
+                            a.rel = 'noopener noreferrer';
+                            a.textContent = (s.name ? (s.name + ': ') : '') + t('repOpen');
+                            tdSrc.appendChild(a);
+                        }
+                    }
+
+                    tr.appendChild(tdE);
+                    tr.appendChild(tdT);
+                    tr.appendChild(tdS);
+                    tr.appendChild(tdR);
+                    tr.appendChild(tdSrc);
+                    tbodyEl.appendChild(tr);
+                }
+            }
+
+            function reputationBadgeClass(sev) {
+                if (sev === 'trustworthy') return 'pass';
+                if (sev === 'low') return 'info';
+                if (sev === 'medium') return 'warn';
+                if (sev === 'high') return 'fail';
+                if (sev === 'potentially_malicious') return 'fail';
+                return 'info';
+            }
+
+            function isPrivateIp(ip) {
+                ip = String(ip || '').trim();
+                if (!ip) return false;
+                // IPv4 RFC1918 + loopback/link-local
+                if (/^10\./.test(ip) || /^127\./.test(ip) || /^192\.168\./.test(ip) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip) || /^169\.254\./.test(ip)) return true;
+                // IPv6 loopback/link-local/ULA
+                if (ip === '::1') return true;
+                if (/^fe80:/i.test(ip)) return true;
+                if (/^fc00:/i.test(ip) || /^fd00:/i.test(ip)) return true;
+                return false;
             }
             function formatIocsText(iocs) {
                 return ['EMAILS', iocs.emails, 'DOMAINS', iocs.domains, 'IPS', iocs.ips, 'MESSAGE IDS', iocs.messageIds, 'HELO / PTR', iocs.heloPtr].map(function(part, idx) {
