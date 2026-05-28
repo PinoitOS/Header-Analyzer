@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; media-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; frame-src 'none'; worker-src 'self' blob:; manifest-src 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://pinoitos-headers-analyzer.analisis-forense-96.workers.dev; media-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; frame-src 'none'; worker-src 'self' blob:; manifest-src 'none';">
     <title>Email Header Analyzer</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070b18'/%3E%3Ccircle cx='28' cy='28' r='14' fill='none' stroke='%2319c7d4' stroke-width='6'/%3E%3Cpath d='M39 39 L52 52' stroke='%238b5cf6' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='28' cy='28' r='7' fill='%23111827'/%3E%3C/svg%3E">
     <style>
@@ -255,6 +255,44 @@
         .glossary-item .glossary-example { margin-top: 0.55rem; padding: 0.55rem; border-radius: 10px; border: 1px dashed var(--border); background: rgba(0,0,0,0.12); font-family: 'Cascadia Mono', 'Consolas', monospace; font-size: 0.68rem; color: var(--text); word-break: break-word; }
         .light .glossary-item .glossary-example { background: rgba(15,23,42,0.04); }
         @media (max-width: 900px) { .main { flex-direction: column; } .input-panel { width: 100%; min-width: 100%; border-right: none; border-bottom: 1px solid var(--border); } .input-panel textarea { min-height: 200px; } body.report-mode .input-panel { width: min(100vw, 420px); min-width: 0; } .report-actions { overflow-x: auto; } }
+
+        .results-tabs { display: flex; gap: 0.5rem; padding: 0.75rem 1rem 0.25rem 1rem; position: sticky; top: 0; z-index: 60; background: linear-gradient(180deg, rgba(7,11,24,0.95), rgba(7,11,24,0.82)); border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); }
+        .light .results-tabs { background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,251,255,0.92)); }
+        .tab-btn { border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--text); border-radius: 999px; padding: 0.45rem 0.75rem; cursor: pointer; font-weight: 850; font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 0.45rem; }
+        .tab-btn:hover { border-color: var(--primary); box-shadow: 0 0 0 3px var(--glow); }
+        .tab-btn.is-active { border-color: rgba(25,199,212,0.75); background: rgba(25,199,212,0.10); }
+        .tab-pill { font-size: 0.68rem; border: 1px solid var(--border); padding: 0.1rem 0.45rem; border-radius: 999px; color: var(--text-muted); }
+        .tab-content { padding: 0.6rem 1rem 1rem 1rem; }
+        .tab-pane.hidden { display: none; }
+
+        .viewer-shell { display: grid; grid-template-columns: 1.35fr 0.65fr; gap: 0.75rem; }
+        @media (max-width: 900px) { .viewer-shell { grid-template-columns: 1fr; } }
+        .viewer-header { border: 1px solid var(--border); border-radius: 14px; background: rgba(7,11,24,0.42); padding: 0.85rem; }
+        .light .viewer-header { background: #f8fbff; }
+        .viewer-hrow { display: grid; grid-template-columns: 120px 1fr; gap: 0.5rem; padding: 0.2rem 0; }
+        .viewer-hk { font-size: 0.72rem; color: var(--text-muted); font-weight: 850; letter-spacing: 0.04em; text-transform: uppercase; }
+        .viewer-hv { font-size: 0.80rem; color: var(--text); word-break: break-word; }
+        .viewer-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.65rem; }
+        .viewer-frame { width: 100%; height: 62vh; border: 1px solid var(--border); border-radius: 14px; background: #fff; }
+        .light .viewer-frame { background: #fff; }
+        .viewer-side { display: flex; flex-direction: column; gap: 0.75rem; }
+        .viewer-side-card { border: 1px solid var(--border); border-radius: 14px; background: rgba(7,11,24,0.42); overflow: hidden; }
+        .light .viewer-side-card { background: #f8fbff; }
+        .viewer-side-head { padding: 0.75rem 0.85rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background: linear-gradient(135deg, rgba(25,199,212,0.10), rgba(139,92,246,0.08)); }
+        .viewer-side-title { font-weight: 900; font-size: 0.76rem; letter-spacing: 0.05em; text-transform: uppercase; }
+        .viewer-side-body { padding: 0.75rem 0.85rem; max-height: 34vh; overflow: auto; }
+        .viewer-list { margin: 0; padding-left: 1.05rem; }
+        .viewer-small { font-size: 0.74rem; color: var(--text-muted); }
+        .link-table { width: 100%; border-collapse: collapse; }
+        .link-table th, .link-table td { border-bottom: 1px solid var(--border); padding: 0.45rem 0.35rem; vertical-align: top; font-size: 0.72rem; }
+        .link-table th { text-align: left; color: var(--text-muted); font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+        .signal-badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.1rem 0.45rem; border-radius: 999px; border: 1px solid var(--border); font-size: 0.68rem; color: var(--text); background: rgba(255,255,255,0.04); }
+        .signal-high { border-color: rgba(255,95,143,0.55); background: rgba(255,95,143,0.10); }
+        .signal-low { border-color: rgba(247,185,85,0.55); background: rgba(247,185,85,0.10); }
+        .att-row { display: flex; gap: 0.5rem; align-items: baseline; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 0.45rem 0; }
+        .att-name { font-size: 0.76rem; color: var(--text); word-break: break-word; font-weight: 800; }
+        .att-meta { font-size: 0.70rem; color: var(--text-muted); }
+        .att-actions { display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end; }
     </style>
 </head>
 <body>
@@ -270,8 +308,6 @@
         </button>
     </header>
     <div class="report-actions" id="reportActions">
-        <button class="btn btn-secondary" id="editHeadersBtn">Edit Headers</button>
-        <button class="btn btn-primary" id="reanalyzeBtn">Re-analyze</button>
         <button class="btn btn-secondary" id="topCopyBtn">Copy Report</button>
         <button class="btn btn-secondary" id="topPdfBtn">Export PDF</button>
         <button class="btn btn-secondary" id="topJsonBtn" type="button">Export JSON</button>
@@ -317,8 +353,53 @@
             <p class="shortcut-hint">Press Ctrl+Enter to analyze</p>
         </aside>
         <section class="results-panel" id="resultsPanel">
-            <div class="empty-state" id="emptyState"><p>Paste email headers and click Analyze</p></div>
-            <div id="reportContainer"></div>
+            <div class="results-tabs" role="tablist" aria-label="Results tabs">
+                <button class="tab-btn" id="tabViewer" type="button" role="tab" aria-selected="false" aria-controls="viewerTab"><span id="tabViewerLabel">Email viewer</span> <span class="tab-pill" id="tabViewerPill">EML/MSG</span></button>
+                <button class="tab-btn is-active" id="tabAnalysis" type="button" role="tab" aria-selected="true" aria-controls="analysisTab"><span id="tabAnalysisLabel">Header analysis</span></button>
+            </div>
+
+            <div class="tab-content">
+                <div class="tab-pane hidden" id="viewerTab" role="tabpanel" aria-labelledby="tabViewer">
+                    <div class="viewer-shell">
+                        <div>
+                            <div class="viewer-header" id="viewerHeader">
+                                <div class="viewer-hrow"><div class="viewer-hk" id="vhSubjectKey">Subject</div><div class="viewer-hv" id="vhSubject">-</div></div>
+                                <div class="viewer-hrow"><div class="viewer-hk" id="vhFromKey">From</div><div class="viewer-hv" id="vhFrom">-</div></div>
+                                <div class="viewer-hrow"><div class="viewer-hk" id="vhToKey">To</div><div class="viewer-hv" id="vhTo">-</div></div>
+                                <div class="viewer-hrow"><div class="viewer-hk" id="vhCcKey">Cc</div><div class="viewer-hv" id="vhCc">-</div></div>
+                                <div class="viewer-hrow"><div class="viewer-hk" id="vhDateKey">Date</div><div class="viewer-hv" id="vhDate">-</div></div>
+                                <div class="viewer-actions">
+                                    <button class="btn btn-secondary" id="viewerShowHtmlBtn" type="button">HTML</button>
+                                    <button class="btn btn-secondary" id="viewerShowTextBtn" type="button">Text</button>
+                                    <button class="btn btn-secondary" id="viewerRemoteToggleBtn" type="button">Remote: OFF</button>
+                                    <button class="btn btn-secondary" id="viewerCopyIocsBtn" type="button">Copy Email Links</button>
+                                    <div class="viewer-small" id="viewerCopyIocsHint" style="align-self:center;opacity:0.9;">(URLs, domains, emails, IPs)</div>
+                                </div>
+                                <div class="viewer-small" id="viewerWarnings"></div>
+                                <div class="viewer-small" id="viewerRemoteLegend"></div>
+                            </div>
+
+                            <iframe class="viewer-frame" id="viewerFrame" sandbox></iframe>
+                        </div>
+
+                        <div class="viewer-side">
+                            <div class="viewer-side-card">
+                                <div class="viewer-side-head"><div class="viewer-side-title" id="linksTitle">Links</div><div class="viewer-small" id="linksCount">0</div></div>
+                                <div class="viewer-side-body" id="linksBody"></div>
+                            </div>
+                            <div class="viewer-side-card">
+                                <div class="viewer-side-head"><div class="viewer-side-title" id="attachmentsTitle">Attachments</div><div class="viewer-small" id="attachmentsCount">0</div></div>
+                                <div class="viewer-side-body" id="attachmentsBody"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="analysisTab" role="tabpanel" aria-labelledby="tabAnalysis">
+                    <div class="empty-state" id="emptyState"><p>Paste email headers and click Analyze</p></div>
+                    <div id="reportContainer"></div>
+                </div>
+            </div>
         </section>
     </main>
     <div class="drawer-backdrop" id="drawerBackdrop"></div>
@@ -1004,6 +1085,45 @@ X-Mailer: Campaign Platform 4.2`
                     appTitle: 'Email Header Analyzer', themeTitle: 'Toggle theme', editHeaders: 'Edit Headers', reanalyze: 'Re-analyze', copyReport: 'Copy Report', copied: 'Copied', exportPdf: 'Export PDF', exportJson: 'Export JSON', exportJsonRaw: 'Export JSON (include raw)', exportJsonConfirm: 'This JSON may contain sensitive data (raw). Continue?', clear: 'Clear', rawHeaders: 'Raw Email Headers', placeholder: 'Paste raw email headers here...', analyze: 'Analyze', loadSample: 'Load Sample', loadEmlMsg: 'Load EML / MSG', dropEml: 'Drop .eml/.msg file here', dropEmlHint: 'Or click the button above to select a file', invalidEml: 'Could not extract a valid header from the selected file.', invalidMsg: 'Could not extract transport headers from the selected .msg file.', emlTooLarge: 'The selected file exceeds the allowed size limit for the analyzer.', msgTooLarge: 'The selected .msg file exceeds the allowed size limit for the analyzer.', msgReceivedNote: '.msg source: the full Received chain cannot be reconstructed (part of the trace may be missing).', msgSampleLabel: 'Sample .msg', loadMsgSample: 'Load .msg Sample', msgSampleNote: 'Loads a local .msg sample into the editor without analyzing it (requires serving the page, e.g. GitHub Pages).', copyIocs: 'Copy IOCs', copiedIocs: 'IOCs copied', sampleType: 'Sample Type', samplePreview: 'Sample Preview', sampleLegitimate: 'Legitimate M365', sampleSpoofing: 'Spoofing / phishing', sampleBulk: 'Bulk / marketing', samplePrefixLow: '[LOW]', samplePrefixMedium: '[MEDIUM]', samplePrefixHigh: '[HIGH]', sampleRiskLow: 'LOW', sampleRiskMedium: 'MEDIUM', sampleRiskHigh: 'HIGH', sampleNote: 'Loads the selected sample into the editor without analyzing it.', sampleOverwriteConfirm: 'There are already headers in the editor. Overwrite them with the selected sample?', analystSummary: 'Analyst Summary', assessment: 'Assessment', confidence: 'Confidence', keyReasons: 'Key reasons', nextStep: 'Next step', routeSummary: 'Route Summary', maxDelay: 'Max delay', anomalies: 'Anomalies', firstOrigin: 'First origin', privateHops: 'Private hops', origin: 'Origin', relay: 'Relay', destination: 'Destination', likelyLegitimate: 'Likely legitimate', likelySpoofing: 'Likely spoofing/phishing', likelyBulk: 'Likely bulk/marketing', needsReview: 'Needs review', hops: 'Hops', shortcut: 'Press Ctrl+Enter to analyze', emptyState: 'Paste email headers and click Analyze', alertReport: 'Report', risk: 'RISK', securityFindings: 'Security Findings', authentication: 'Authentication', details: 'Details', deliveryRoute: 'Delivery Route', alerts: 'Alerts'
                 }
             };
+
+            // Extend translations without editing the big inline literal.
+            Object.assign(translations.es, {
+                viewerTab: 'Visualizador',
+                analysisTab: 'Analisis de cabeceras',
+                viewerHtml: 'HTML',
+                viewerText: 'Texto',
+                // viewerCopyLinks removed (redundant with viewerCopyIocs)
+                viewerLinks: 'Enlaces',
+                viewerAttachments: 'Adjuntos',
+                viewerSubject: 'Asunto',
+                viewerFrom: 'De',
+                viewerTo: 'Para',
+                viewerCc: 'Cc',
+                viewerDate: 'Fecha'
+            });
+            Object.assign(translations.en, {
+                viewerTab: 'Email viewer',
+                analysisTab: 'Header analysis',
+                viewerHtml: 'HTML',
+                viewerText: 'Text',
+                // viewerCopyLinks removed (redundant with viewerCopyIocs)
+                viewerLinks: 'Links',
+                viewerAttachments: 'Attachments',
+                viewerSubject: 'Subject',
+                viewerFrom: 'From',
+                viewerTo: 'To',
+                viewerCc: 'Cc',
+                viewerDate: 'Date'
+            });
+
+            // Differentiate header IOCs vs viewer IOCs.
+            translations.es.copyIocs = 'Copiar Datos Cabeceras';
+            translations.en.copyIocs = 'Copy Header Data';
+            translations.es.viewerCopyIocs = 'Copiar Enlaces del Correo';
+            translations.en.viewerCopyIocs = 'Copy Email Links';
+            translations.es.copiedIocs = 'Datos de cabeceras copiados';
+            translations.en.copiedIocs = 'Header data copied';
+
             const phraseTranslations = {
                 es: {
                     'Risk Score': 'Puntuacion de Riesgo', 'LOW RISK': 'RIESGO BAJO', 'MEDIUM RISK': 'RIESGO MEDIO', 'HIGH RISK': 'RIESGO ALTO', 'Security Findings': 'Hallazgos de Seguridad', 'Passed': 'Correcto', 'Failed': 'Fallido', 'Not checked': 'No verificado', 'Authentication': 'Autenticacion', 'Result': 'Resultado', 'Client IP': 'IP cliente', 'Envelope From': 'Envelope From', 'Domain': 'Dominio', 'HELO/EHLO': 'HELO/EHLO', 'Evidence': 'Evidencia', 'Indicator': 'Indicador', 'Algorithm': 'Algoritmo', 'Selector (s=)': 'Selector (s=)', 'Action': 'Accion', 'Header From': 'Header From', 'Envelope Analysis': 'Analisis de Envelope', 'Delivery Route': 'Ruta de Entrega', 'Other Headers': 'Otras Cabeceras', 'Copy Report': 'Copiar reporte', 'Export PDF': 'Exportar PDF', 'Field': 'Campo', 'Value': 'Valor', 'Description': 'Descripcion', 'Evaluation': 'Evaluacion', 'ALERT': 'ALERTA', 'SECURITY ALERT': 'ALERTA DE SEGURIDAD', 'Prioritized summary of relevant findings': 'Resumen priorizado de hallazgos relevantes', 'HIGH': 'ALTO', 'MEDIUM': 'MEDIO', 'LOW': 'BAJO', 'INFO': 'INFO', 'OK': 'OK', 'Delay': 'Demora', 'Protocol': 'Protocolo', 'Time': 'Hora', 'For': 'Para', 'Unknown': 'Desconocido', 'From': 'De', 'To': 'Para', 'Subject': 'Asunto', 'Date': 'Fecha', 'Hops': 'Saltos', 'Bulk Complaint Level: higher value means more complaints and bulk/unwanted mail likelihood': 'Bulk Complaint Level: valor superior indica mayor probabilidad de quejas y correo masivo/no deseado', 'Phishing Confidence Level: phishing confidence diagnostic indicator': 'Phishing Confidence Level: indicador diagnostico de confianza de phishing', 'Enhanced Filtering Verdict: enhanced filtering diagnostic verdict': 'Enhanced Filtering Verdict: veredicto diagnostico de filtrado mejorado'
@@ -1308,8 +1428,6 @@ X-Mailer: Campaign Platform 4.2`
                 document.title = t('appTitle');
                 document.getElementById('appTitle').textContent = t('appTitle');
                 document.getElementById('themeToggle').title = t('themeTitle');
-                document.getElementById('editHeadersBtn').textContent = t('editHeaders');
-                document.getElementById('reanalyzeBtn').textContent = t('reanalyze');
                 document.getElementById('topCopyBtn').textContent = t('copyReport');
                 document.getElementById('topPdfBtn').textContent = t('exportPdf');
                 document.getElementById('topJsonBtn').textContent = t('exportJson');
@@ -1332,6 +1450,24 @@ X-Mailer: Campaign Platform 4.2`
                 document.getElementById('topIocsBtn').textContent = t('copyIocs');
                 document.querySelector('.shortcut-hint').textContent = t('shortcut');
                 document.querySelector('#emptyState p').textContent = t('emptyState');
+
+                document.getElementById('tabViewerLabel').textContent = t('viewerTab');
+                document.getElementById('tabAnalysisLabel').textContent = t('analysisTab');
+                document.getElementById('linksTitle').textContent = t('viewerLinks');
+                document.getElementById('attachmentsTitle').textContent = t('viewerAttachments');
+                document.getElementById('viewerShowHtmlBtn').textContent = t('viewerHtml');
+                document.getElementById('viewerShowTextBtn').textContent = t('viewerText');
+                document.getElementById('viewerCopyIocsBtn').textContent = t('viewerCopyIocs');
+                var hint = document.getElementById('viewerCopyIocsHint');
+                if (hint) hint.textContent = currentLang === 'es' ? '(URLs, dominios, emails, IPs)' : '(URLs, domains, emails, IPs)';
+                updateRemoteToggleLabel();
+                updateRemoteLegend();
+
+                document.getElementById('vhSubjectKey').textContent = t('viewerSubject');
+                document.getElementById('vhFromKey').textContent = t('viewerFrom');
+                document.getElementById('vhToKey').textContent = t('viewerTo');
+                document.getElementById('vhCcKey').textContent = t('viewerCc');
+                document.getElementById('vhDateKey').textContent = t('viewerDate');
                 document.getElementById('langEsBtn').classList.toggle('active', currentLang === 'es');
                 document.getElementById('langEnBtn').classList.toggle('active', currentLang === 'en');
                 updateSamplePreview();
@@ -1566,10 +1702,23 @@ X-Mailer: Campaign Platform 4.2`
                 document.body.classList.remove('report-mode', 'input-open');
                 currentReportData = null;
                 currentInputMeta = { format: 'manual', note: null };
+
+                // Clear also forces Remote OFF for safety.
+                viewerAllowRemote = false;
+                localStorage.setItem('viewer_allow_remote', '0');
+                updateRemoteToggleLabel();
+                updateRemoteLegend();
+                revokeObjectUrls();
+                currentViewerMessage = null;
+                var frame = document.getElementById('viewerFrame');
+                if (frame) { frame.removeAttribute('srcdoc'); frame.src = 'about:blank'; }
+                document.getElementById('linksBody').textContent = '';
+                document.getElementById('attachmentsBody').textContent = '';
+                document.getElementById('linksCount').textContent = '0';
+                document.getElementById('attachmentsCount').textContent = '0';
+                document.getElementById('viewerWarnings').textContent = '';
             });
-            document.getElementById('editHeadersBtn').addEventListener('click', function() { document.body.classList.add('input-open'); });
             document.getElementById('drawerBackdrop').addEventListener('click', function() { document.body.classList.remove('input-open'); });
-            document.getElementById('reanalyzeBtn').addEventListener('click', function() { analyzeHeaders(); });
             document.getElementById('topCopyBtn').addEventListener('click', function() { if (window.copyReport) window.copyReport(); });
             document.getElementById('topPdfBtn').addEventListener('click', function() { if (window.generatePdfReport) window.generatePdfReport(); });
             document.getElementById('topJsonBtn').addEventListener('click', function() { if (window.exportReportJson) window.exportReportJson({ includeRaw: false }); });
@@ -1581,6 +1730,20 @@ X-Mailer: Campaign Platform 4.2`
                 document.body.classList.remove('report-mode', 'input-open');
                 currentReportData = null;
                 currentInputMeta = { format: 'manual', note: null };
+
+                viewerAllowRemote = false;
+                localStorage.setItem('viewer_allow_remote', '0');
+                updateRemoteToggleLabel();
+                updateRemoteLegend();
+                revokeObjectUrls();
+                currentViewerMessage = null;
+                var frame = document.getElementById('viewerFrame');
+                if (frame) { frame.removeAttribute('srcdoc'); frame.src = 'about:blank'; }
+                document.getElementById('linksBody').textContent = '';
+                document.getElementById('attachmentsBody').textContent = '';
+                document.getElementById('linksCount').textContent = '0';
+                document.getElementById('attachmentsCount').textContent = '0';
+                document.getElementById('viewerWarnings').textContent = '';
             });
             function resetCurrentReportView() {
                 document.getElementById('reportContainer').textContent = '';
@@ -1601,6 +1764,725 @@ X-Mailer: Campaign Platform 4.2`
                 document.getElementById('headersInput').value = text;
                 currentInputMeta = meta || { format: 'manual', note: null };
                 resetCurrentReportView();
+                if (meta && meta.autoAnalyze) {
+                    // Auto-run header analysis for non-manual sources (file/sample). Do not change tabs.
+                    analyzeHeaders();
+                }
+            }
+
+            var currentViewerMessage = null;
+            var currentViewerMode = 'html';
+            var currentObjectUrls = [];
+            var viewerAllowRemote = localStorage.getItem('viewer_allow_remote') === '1';
+
+            function setResultsTab(tab) {
+                var viewerBtn = document.getElementById('tabViewer');
+                var analysisBtn = document.getElementById('tabAnalysis');
+                var viewerTab = document.getElementById('viewerTab');
+                var analysisTab = document.getElementById('analysisTab');
+                var isViewer = tab === 'viewer';
+                viewerBtn.classList.toggle('is-active', isViewer);
+                analysisBtn.classList.toggle('is-active', !isViewer);
+                viewerBtn.setAttribute('aria-selected', isViewer ? 'true' : 'false');
+                analysisBtn.setAttribute('aria-selected', !isViewer ? 'true' : 'false');
+                viewerTab.classList.toggle('hidden', !isViewer);
+                analysisTab.classList.toggle('hidden', isViewer);
+            }
+
+            document.getElementById('tabViewer').addEventListener('click', function() { setResultsTab('viewer'); });
+            document.getElementById('tabAnalysis').addEventListener('click', function() { setResultsTab('analysis'); });
+
+            function revokeObjectUrls() {
+                for (var i = 0; i < currentObjectUrls.length; i++) {
+                    try { URL.revokeObjectURL(currentObjectUrls[i]); } catch (e) {}
+                }
+                currentObjectUrls = [];
+            }
+
+            function safeBlobUrl(blob) {
+                var url = URL.createObjectURL(blob);
+                currentObjectUrls.push(url);
+                return url;
+            }
+
+            function normalizeWhitespace(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
+
+            function decodeHtmlEntities(s) {
+                if (!s) return '';
+                var ta = document.createElement('textarea');
+                ta.innerHTML = s;
+                return ta.value;
+            }
+
+            function copyTextToClipboard(s) {
+                s = String(s || '');
+                if (!s) return;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(s);
+                    return;
+                }
+                var ta = document.createElement('textarea');
+                ta.value = s;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch (e) {}
+                document.body.removeChild(ta);
+            }
+
+            function collectViewerIocs(msg) {
+                msg = msg || currentViewerMessage;
+                if (!msg) return [];
+                var out = [];
+                var seen = Object.create(null);
+                function add(v) {
+                    v = String(v || '').trim();
+                    if (!v) return;
+                    if (seen[v]) return;
+                    seen[v] = true;
+                    out.push(v);
+                }
+
+                // URLs + domains from extracted links
+                var links = msg.links || [];
+                for (var i = 0; i < links.length; i++) {
+                    if (links[i].href) add(links[i].href);
+                    if (links[i].hrefHost) add(links[i].hrefHost);
+                    if (links[i].visibleHost) add(links[i].visibleHost);
+                }
+
+                // Emails, IPs, and URLs found in visible body text
+                var text = '';
+                if (msg.bodies && msg.bodies.plain) text += '\n' + String(msg.bodies.plain);
+                if (msg.bodies && msg.bodies.html) {
+                    // Strip tags for IOC extraction
+                    try {
+                        var d = new DOMParser().parseFromString(String(msg.bodies.html), 'text/html');
+                        text += '\n' + (d && d.body ? (d.body.textContent || '') : '');
+                    } catch (e) {}
+                }
+                text = decodeHtmlEntities(text);
+
+                var m;
+                var urlRe = /\bhttps?:\/\/[^\s"'<>]+/gi;
+                while ((m = urlRe.exec(text))) add(m[0]);
+
+                var emailRe = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+                while ((m = emailRe.exec(text))) add(m[0]);
+
+                var ipv4Re = /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g;
+                while ((m = ipv4Re.exec(text))) add(m[0]);
+
+                // Very loose IPv6 (best-effort)
+                var ipv6Re = /\b(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\b/g;
+                while ((m = ipv6Re.exec(text))) {
+                    if (m[0].indexOf('::') !== -1 || m[0].split(':').length >= 3) add(m[0]);
+                }
+
+                out.sort(function(a, b) { return a.localeCompare(b); });
+                return out;
+            }
+
+            function parseHeaderParams(value) {
+                var out = { value: '', params: {} };
+                if (!value) return out;
+                var parts = String(value).split(';');
+                out.value = parts.shift().trim().toLowerCase();
+                for (var i = 0; i < parts.length; i++) {
+                    var p = parts[i];
+                    var eq = p.indexOf('=');
+                    if (eq === -1) continue;
+                    var k = p.slice(0, eq).trim().toLowerCase();
+                    var v = p.slice(eq + 1).trim();
+                    if (v[0] === '"' && v[v.length - 1] === '"') v = v.slice(1, -1);
+                    out.params[k] = v;
+                }
+                return out;
+            }
+
+            function decodeQuotedPrintableToBytes(input) {
+                var s = String(input || '').replace(/=\r?\n/g, '');
+                var bytes = [];
+                for (var i = 0; i < s.length; i++) {
+                    var ch = s[i];
+                    if (ch === '=' && i + 2 < s.length && /[0-9A-Fa-f]{2}/.test(s.slice(i + 1, i + 3))) {
+                        bytes.push(parseInt(s.slice(i + 1, i + 3), 16));
+                        i += 2;
+                        continue;
+                    }
+                    bytes.push(ch.charCodeAt(0) & 0xff);
+                }
+                return new Uint8Array(bytes);
+            }
+
+            function decodeBase64ToBytes(input) {
+                var s = String(input || '').replace(/\s+/g, '');
+                try {
+                    var bin = atob(s);
+                    var out = new Uint8Array(bin.length);
+                    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i) & 0xff;
+                    return out;
+                } catch (e) {
+                    return new Uint8Array(0);
+                }
+            }
+
+            function decodeBytesToString(bytes, charset) {
+                if (!bytes) return '';
+                var cs = (charset || '').toLowerCase();
+                var candidates = cs ? [cs, 'utf-8', 'windows-1252', 'iso-8859-1'] : ['utf-8', 'windows-1252', 'iso-8859-1'];
+                for (var i = 0; i < candidates.length; i++) {
+                    try {
+                        return new TextDecoder(candidates[i]).decode(bytes);
+                    } catch (e) {}
+                }
+                // Fallback: latin1-ish
+                var s = '';
+                for (var j = 0; j < bytes.length; j++) s += String.fromCharCode(bytes[j]);
+                return s;
+            }
+
+            function tryParseUrl(u) {
+                try { return new URL(u); } catch (e) { return null; }
+            }
+
+            function extractVisibleHost(text) {
+                var s = normalizeWhitespace(decodeHtmlEntities(text || ''));
+                if (!s) return null;
+                // Strip surrounding punctuation
+                s = s.replace(/^[\s\(\[\{\<\"\']+/, '').replace(/[\s\)\]\}\>\"\'\.,;:!]+$/, '');
+                var url = null;
+                if (/^https?:\/\//i.test(s)) url = tryParseUrl(s);
+                else if (/^www\./i.test(s)) url = tryParseUrl('https://' + s);
+                if (url && url.hostname) return url.hostname.toLowerCase();
+                var m = s.match(/\b([a-z0-9-]+\.)+[a-z]{2,}\b/i);
+                return m ? m[0].toLowerCase() : null;
+            }
+
+            function stripWww(host) { return host ? host.replace(/^www\./i, '').toLowerCase() : host; }
+
+            function isClearlySubdomainOf(host, base) {
+                host = stripWww(host);
+                base = stripWww(base);
+                if (!host || !base) return false;
+                if (host === base) return true;
+                return host.endsWith('.' + base);
+            }
+
+            function looksLikeTyposquat(a, b) {
+                if (!a || !b) return false;
+                a = stripWww(a); b = stripWww(b);
+                var al = a.split('.'); var bl = b.split('.');
+                var la = al[0] || ''; var lb = bl[0] || '';
+                if (!la || !lb) return false;
+                if (Math.abs(la.length - lb.length) > 2) return false;
+                // Very small edit distance heuristic (OSA-ish)
+                function dist(x, y) {
+                    var dp = [];
+                    for (var i = 0; i <= x.length; i++) { dp[i] = []; dp[i][0] = i; }
+                    for (var j = 0; j <= y.length; j++) dp[0][j] = j;
+                    for (var i2 = 1; i2 <= x.length; i2++) {
+                        for (var j2 = 1; j2 <= y.length; j2++) {
+                            var cost = x[i2 - 1] === y[j2 - 1] ? 0 : 1;
+                            var v = Math.min(dp[i2 - 1][j2] + 1, dp[i2][j2 - 1] + 1, dp[i2 - 1][j2 - 1] + cost);
+                            if (i2 > 1 && j2 > 1 && x[i2 - 1] === y[j2 - 2] && x[i2 - 2] === y[j2 - 1]) v = Math.min(v, dp[i2 - 2][j2 - 2] + cost);
+                            dp[i2][j2] = v;
+                        }
+                    }
+                    return dp[x.length][y.length];
+                }
+                return dist(la, lb) <= 1;
+            }
+
+            function analyzeLinksFromHtml(html, cidMap) {
+                var links = [];
+                if (!html) return links;
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(String(html), 'text/html');
+                // Remove <base> influence for URL parsing in analysis; we want to reflect the literal href.
+                var anchors = doc.querySelectorAll('a[href]');
+                for (var i = 0; i < anchors.length; i++) {
+                    var a = anchors[i];
+                    var hrefRaw = String(a.getAttribute('href') || '').trim();
+                    if (!hrefRaw) continue;
+                    var visible = normalizeWhitespace(a.textContent || '');
+                    var visibleHost = extractVisibleHost(visible);
+                    var hrefUrl = null;
+                    var hrefHost = null;
+                    if (/^https?:\/\//i.test(hrefRaw)) { hrefUrl = tryParseUrl(hrefRaw); hrefHost = hrefUrl ? hrefUrl.hostname.toLowerCase() : null; }
+                    else if (/^mailto:/i.test(hrefRaw) || /^tel:/i.test(hrefRaw) || hrefRaw[0] === '#') { hrefHost = null; }
+                    else if (/^cid:/i.test(hrefRaw) && cidMap && cidMap[hrefRaw.slice(4)]) { hrefHost = null; }
+                    var signals = [];
+                    var confidence = 'low';
+                    if (visibleHost && hrefHost) {
+                        var ok = isClearlySubdomainOf(hrefHost, visibleHost);
+                        if (!ok) {
+                            signals.push({ level: 'high', text: 'Visible != href domain' });
+                            confidence = 'high';
+                            if (looksLikeTyposquat(hrefHost, visibleHost)) signals.push({ level: 'high', text: 'Typosquat lookalike' });
+                            if (hrefHost.indexOf('xn--') === 0) signals.push({ level: 'low', text: 'Punycode domain' });
+                            if (/@/.test(hrefRaw)) signals.push({ level: 'low', text: '@ in URL' });
+                        }
+                    }
+                    links.push({ visible: visible, href: hrefRaw, visibleHost: visibleHost, hrefHost: hrefHost, signals: signals, confidence: confidence });
+                }
+                return links;
+            }
+
+            function buildViewerHtmlAndLinks(html, cidUrlById, opts) {
+                opts = opts || {};
+                var allowRemote = !!opts.allowRemote;
+
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(String(html || ''), 'text/html');
+                var stats = {
+                    remoteLoadsAllowed: 0,
+                    remoteLoadsBlocked: 0,
+                    remoteCssAllowed: 0,
+                    remoteCssBlocked: 0,
+                    remoteStylesheetsAllowed: 0,
+                    remoteStylesheetsBlocked: 0,
+                    remoteFormsAllowed: 0,
+                    remoteFormsDisabled: 0,
+                    remoteLinksPresent: 0,
+                    remoteLinksDisabled: 0,
+                    blockedScriptUrls: 0,
+                    missingCid: 0
+                };
+                var links = [];
+
+                function safeTextSnippet(node) {
+                    if (!node) return '';
+                    var t = normalizeWhitespace(node.textContent || '');
+                    if (t.length > 220) t = t.slice(0, 217) + '...';
+                    return t;
+                }
+                function containerHintFor(a) {
+                    var c = a.closest ? a.closest('p,li,td,th,blockquote,footer,header,section,article,div') : null;
+                    var tag = c ? c.tagName.toLowerCase() : (a.parentElement ? a.parentElement.tagName.toLowerCase() : '');
+                    return tag || 'body';
+                }
+
+                // Remove dangerous elements but keep <style> for email formatting.
+                var kill = doc.querySelectorAll('script, iframe, object, embed, base, meta');
+                for (var i = 0; i < kill.length; i++) kill[i].parentNode && kill[i].parentNode.removeChild(kill[i]);
+
+                // Handle <link> tags: allow remote stylesheets only when allowRemote.
+                var linkEls = doc.querySelectorAll('link');
+                for (var li = 0; li < linkEls.length; li++) {
+                    var link = linkEls[li];
+                    var rel = String(link.getAttribute('rel') || '').toLowerCase();
+                    var href = String(link.getAttribute('href') || '').trim();
+                    var isStylesheet = rel.split(/\s+/).indexOf('stylesheet') !== -1;
+                    var isRemote = /^https?:\/\//i.test(href) || /^\/\//.test(href);
+                    if (isStylesheet && isRemote) {
+                        if (allowRemote) stats.remoteStylesheetsAllowed++;
+                        else { stats.remoteStylesheetsBlocked++; link.parentNode && link.parentNode.removeChild(link); }
+                    } else {
+                        // Non-stylesheet links are not needed for email display.
+                        link.parentNode && link.parentNode.removeChild(link);
+                    }
+                }
+
+                // In OFF mode, remove <style> blocks that import remote content.
+                if (!allowRemote) {
+                    var styleEls = doc.querySelectorAll('style');
+                    for (var si = 0; si < styleEls.length; si++) {
+                        var cssText = String(styleEls[si].textContent || '');
+                        if (/@import\s+url\(\s*(?:https?:)?\/\//i.test(cssText) || /url\(\s*(?:https?:)?\/\//i.test(cssText)) {
+                            stats.remoteCssBlocked++;
+                            styleEls[si].parentNode && styleEls[si].parentNode.removeChild(styleEls[si]);
+                        }
+                    }
+                } else {
+                    // Best-effort count of remote CSS usages in <style>
+                    var styleEls2 = doc.querySelectorAll('style');
+                    for (var si2 = 0; si2 < styleEls2.length; si2++) {
+                        var cssText2 = String(styleEls2[si2].textContent || '');
+                        if (/@import\s+url\(\s*(?:https?:)?\/\//i.test(cssText2) || /url\(\s*(?:https?:)?\/\//i.test(cssText2)) stats.remoteCssAllowed++;
+                    }
+                }
+
+                // Enumerate anchors (provenance) and insert markers.
+                var anchors = doc.querySelectorAll('a[href]');
+                for (var ai = 0; ai < anchors.length; ai++) {
+                    var a = anchors[ai];
+                    var hrefRaw = String(a.getAttribute('href') || '').trim();
+                    var visible = normalizeWhitespace(a.textContent || '');
+                    var visibleHost = extractVisibleHost(visible);
+                    var hrefHost = null;
+                    var hrefUrl = null;
+                    if (/^https?:\/\//i.test(hrefRaw) || /^\/\//.test(hrefRaw)) {
+                        hrefUrl = tryParseUrl(hrefRaw);
+                        hrefHost = hrefUrl ? hrefUrl.hostname.toLowerCase() : null;
+                        stats.remoteLinksPresent++;
+                    }
+
+                    var id = 'L' + (ai + 1);
+                    var marker = doc.createElement('span');
+                    marker.textContent = ' [' + id + ']';
+                    marker.setAttribute('style', 'font-size:11px; font-family: ui-monospace, Consolas, monospace; color: #6b7280;');
+                    if (a.parentNode) a.parentNode.insertBefore(marker, a.nextSibling);
+
+                    var c = a.closest ? a.closest('p,li,td,th,blockquote,footer,header,section,article,div') : null;
+                    var snippet = safeTextSnippet(c || a.parentElement || a);
+                    var hint = containerHintFor(a);
+
+                    var signals = [];
+                    var confidence = 'low';
+                    if (visibleHost && hrefHost) {
+                        var ok = isClearlySubdomainOf(hrefHost, visibleHost);
+                        if (!ok) {
+                            signals.push({ level: 'high', text: 'Visible != href domain' });
+                            confidence = 'high';
+                            if (looksLikeTyposquat(hrefHost, visibleHost)) signals.push({ level: 'high', text: 'Typosquat lookalike' });
+                            if (hrefHost.indexOf('xn--') === 0) signals.push({ level: 'low', text: 'Punycode domain' });
+                            if (/@/.test(hrefRaw)) signals.push({ level: 'low', text: '@ in URL' });
+                        }
+                    }
+
+                    links.push({ id: id, where: hint, snippet: snippet, visible: visible, href: hrefRaw, visibleHost: visibleHost, hrefHost: hrefHost, signals: signals, confidence: confidence, kind: (a.querySelector && a.querySelector('img')) ? 'image-link' : 'text-link' });
+                }
+
+                // Sanitize attributes.
+                var all = doc.querySelectorAll('*');
+                for (var j = 0; j < all.length; j++) {
+                    var el = all[j];
+                    for (var k = el.attributes.length - 1; k >= 0; k--) {
+                        var attr = el.attributes[k];
+                        var name = attr.name.toLowerCase();
+                        var val = String(attr.value || '');
+                        if (name.indexOf('on') === 0) { el.removeAttribute(attr.name); continue; }
+
+                        if (name === 'href' || name === 'src' || name === 'action' || name === 'srcset' || name === 'poster' || name === 'background' || name === 'xlink:href' || name === 'formaction') {
+                            var v = val.trim();
+                            if (/^javascript:/i.test(v) || /^vbscript:/i.test(v)) { el.removeAttribute(attr.name); stats.blockedScriptUrls++; continue; }
+
+                            // Links are never navigable in the viewer.
+                            if (name === 'href') {
+                                if (v) {
+                                    el.setAttribute('data-orig-href', v);
+                                    el.setAttribute('title', 'Original href: ' + v);
+                                }
+                                el.setAttribute('href', '#');
+                                el.removeAttribute('target');
+                                el.removeAttribute('download');
+                                el.removeAttribute('ping');
+                                el.removeAttribute('rel');
+                                stats.remoteLinksDisabled++;
+                                continue;
+                            }
+
+                            if (/^cid:/i.test(v)) {
+                                var cid = v.slice(4).replace(/[<>]/g, '').trim();
+                                if (cidUrlById && cidUrlById[cid]) el.setAttribute(attr.name, cidUrlById[cid]);
+                                else stats.missingCid++;
+                                continue;
+                            }
+
+                            // Always allow local blob/data URLs.
+                            if (/^blob:/i.test(v) || /^data:/i.test(v)) continue;
+
+                            // Scheme-relative is effectively remote.
+                            var isRemote = /^https?:\/\//i.test(v) || /^\/\//.test(v);
+                            // Relative URLs could resolve against the hosting origin; block to avoid unintended requests.
+                            var isRelative = !isRemote && !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(v);
+                            if (isRelative) { el.removeAttribute(attr.name); stats.remoteLoadsBlocked++; continue; }
+
+                            if (isRemote) {
+                                if (name === 'src' || name === 'srcset' || name === 'poster' || name === 'background' || name === 'xlink:href') {
+                                    if (allowRemote) stats.remoteLoadsAllowed++;
+                                    else { el.removeAttribute(attr.name); stats.remoteLoadsBlocked++; }
+                                } else if (name === 'action' || name === 'formaction') {
+                                    if (allowRemote) stats.remoteFormsAllowed++;
+                                    else {
+                                        el.setAttribute('data-orig-action', v);
+                                        el.setAttribute(attr.name, '#');
+                                        stats.remoteFormsDisabled++;
+                                    }
+                                }
+                                continue;
+                            }
+                        }
+
+                        if (name === 'style' && /url\(\s*(?:https?:)?\/\//i.test(val)) {
+                            if (allowRemote) stats.remoteCssAllowed++;
+                            else { el.removeAttribute(attr.name); stats.remoteCssBlocked++; }
+                        }
+                    }
+                }
+
+                var headHtml = doc.head ? doc.head.innerHTML : '';
+                var bodyHtml = doc.body ? doc.body.innerHTML : '';
+                var outHtml = '<!doctype html><html><head><meta charset="utf-8">' + headHtml + '</head><body>' + bodyHtml + '</body></html>';
+                return { html: outHtml, links: links, stats: stats };
+            }
+
+            function renderViewerMessage(msg) {
+                revokeObjectUrls();
+                currentViewerMessage = msg;
+                currentViewerMode = (msg && msg.bodies && msg.bodies.html) ? 'html' : 'text';
+
+                var env = (msg && msg.envelope) ? msg.envelope : {};
+                document.getElementById('vhSubject').textContent = env.subject || '-';
+                document.getElementById('vhFrom').textContent = env.from || '-';
+                document.getElementById('vhTo').textContent = env.to || '-';
+                document.getElementById('vhCc').textContent = env.cc || '-';
+                document.getElementById('vhDate').textContent = env.date || '-';
+
+                // Links + attachments
+                renderLinksPanel(msg);
+                renderAttachmentsPanel(msg);
+
+                // Warnings
+                var w = (msg && msg.warnings) ? msg.warnings : [];
+                document.getElementById('viewerWarnings').textContent = w.length ? w.join(' | ') : '';
+
+                renderViewerBody();
+            }
+
+            function renderViewerBody() {
+                var frame = document.getElementById('viewerFrame');
+                if (!currentViewerMessage) { frame.removeAttribute('srcdoc'); frame.src = 'about:blank'; return; }
+                if (currentViewerMode === 'text') {
+                    var text = (currentViewerMessage.bodies && currentViewerMessage.bodies.plain) ? String(currentViewerMessage.bodies.plain) : '';
+                    var safe = '<!doctype html><html><head><meta charset="utf-8"></head><body><pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Consolas,monospace;font-size:13px;line-height:1.45;padding:12px;">' + escapeHtml(text || '') + '</pre></body></html>';
+                    frame.srcdoc = safe;
+                    return;
+                }
+                var html = (currentViewerMessage.bodies && currentViewerMessage.bodies.html) ? String(currentViewerMessage.bodies.html) : '';
+                var cidMap = currentViewerMessage.cidMap || {};
+                var built = buildViewerHtmlAndLinks(html, cidMap, { allowRemote: viewerAllowRemote });
+                currentViewerMessage.links = built.links || [];
+                currentViewerMessage.viewerStats = built.stats || null;
+                renderLinksPanel(currentViewerMessage);
+
+                var stats = currentViewerMessage.viewerStats || {};
+                var w = [];
+                if (viewerAllowRemote) {
+                    if (stats.remoteLoadsAllowed) w.push('Remote loads allowed: ' + stats.remoteLoadsAllowed);
+                    if (stats.remoteCssAllowed) w.push('Remote CSS allowed: ' + stats.remoteCssAllowed);
+                    if (stats.remoteStylesheetsAllowed) w.push('Remote stylesheets allowed: ' + stats.remoteStylesheetsAllowed);
+                    if (stats.remoteFormsAllowed) w.push('Remote forms allowed: ' + stats.remoteFormsAllowed);
+                    if (stats.remoteLinksPresent) w.push('Remote links present: ' + stats.remoteLinksPresent + ' (copy from panel)');
+                } else {
+                    if (stats.remoteLoadsBlocked) w.push('Remote loads blocked: ' + stats.remoteLoadsBlocked);
+                    if (stats.remoteCssBlocked) w.push('Remote CSS blocked: ' + stats.remoteCssBlocked);
+                    if (stats.remoteStylesheetsBlocked) w.push('Remote stylesheets blocked: ' + stats.remoteStylesheetsBlocked);
+                    if (stats.remoteFormsDisabled) w.push('Remote forms disabled: ' + stats.remoteFormsDisabled);
+                    if (stats.remoteLinksDisabled) w.push('Remote links disabled: ' + stats.remoteLinksDisabled);
+                }
+                if (stats.missingCid) w.push('Missing CID: ' + stats.missingCid);
+                if (stats.blockedScriptUrls) w.push('Script URLs blocked: ' + stats.blockedScriptUrls);
+                currentViewerMessage.warnings = w;
+                document.getElementById('viewerWarnings').textContent = w.length ? w.join(' | ') : '';
+
+                frame.srcdoc = built.html;
+            }
+
+            document.getElementById('viewerShowHtmlBtn').addEventListener('click', function() {
+                currentViewerMode = 'html';
+                renderViewerBody();
+            });
+            document.getElementById('viewerShowTextBtn').addEventListener('click', function() {
+                currentViewerMode = 'text';
+                renderViewerBody();
+            });
+            function updateRemoteToggleLabel() {
+                var btn = document.getElementById('viewerRemoteToggleBtn');
+                if (!btn) return;
+                btn.textContent = (currentLang === 'es' ? 'Remoto: ' : 'Remote: ') + (viewerAllowRemote ? 'ON' : 'OFF');
+            }
+
+            function updateRemoteLegend() {
+                var el = document.getElementById('viewerRemoteLegend');
+                if (!el) return;
+                if (currentLang === 'es') {
+                    el.innerHTML = '<strong>Remoto OFF</strong>: bloquea recursos externos (imagenes/CSS/estilos, formularios). Reduce tracking y fugas de IP/UA. ' +
+                        '<strong>Remoto ON</strong>: permite cargar recursos externos y enviar formularios (puede contactar hosts externos). ' +
+                        'Los enlaces no se abren desde el visor; se copian desde la tabla.';
+                } else {
+                    el.innerHTML = '<strong>Remote OFF</strong>: blocks external resources (images/CSS, forms). Reduces tracking and IP/UA leaks. ' +
+                        '<strong>Remote ON</strong>: allows external resources and form submissions (may contact external hosts). ' +
+                        'Links don\'t open in the viewer; copy them from the table.';
+                }
+            }
+            document.getElementById('viewerRemoteToggleBtn').addEventListener('click', function() {
+                viewerAllowRemote = !viewerAllowRemote;
+                localStorage.setItem('viewer_allow_remote', viewerAllowRemote ? '1' : '0');
+                updateRemoteToggleLabel();
+                updateRemoteLegend();
+                renderViewerBody();
+            });
+            document.getElementById('viewerCopyIocsBtn').addEventListener('click', function() {
+                var iocs = collectViewerIocs(currentViewerMessage);
+                copyTextToClipboard(iocs.join('\n'));
+
+                var btn = document.getElementById('viewerCopyIocsBtn');
+                if (btn) {
+                    btn.textContent = t('copied') + '!';
+                    setTimeout(function() { btn.textContent = t('viewerCopyIocs'); }, 1800);
+                }
+            });
+            // viewerCopyLinksBtn removed (redundant; viewerCopyIocs copies all relevant IOCs)
+
+            function renderLinksPanel(msg) {
+                var body = document.getElementById('linksBody');
+                var countEl = document.getElementById('linksCount');
+                body.textContent = '';
+                var links = (msg && msg.links) ? msg.links : [];
+                countEl.textContent = String(links.length);
+                if (!links.length) {
+                    var p = document.createElement('div');
+                    p.className = 'viewer-small';
+                    p.textContent = currentLang === 'es' ? 'No se detectaron enlaces en el cuerpo.' : 'No links detected in body.';
+                    body.appendChild(p);
+                    return;
+                }
+
+                var table = document.createElement('table');
+                table.className = 'link-table';
+                var thead = document.createElement('thead');
+                thead.innerHTML = '<tr><th>ID</th><th>' + (currentLang === 'es' ? 'Contexto' : 'Context') + '</th><th>' + (currentLang === 'es' ? 'Visible' : 'Visible') + '</th><th>Href</th><th>' + (currentLang === 'es' ? 'Senales (heuristicas)' : 'Signals (heuristics)') + '</th><th>' + (currentLang === 'es' ? 'Copiar' : 'Copy') + '</th></tr>';
+                table.appendChild(thead);
+                var tbody = document.createElement('tbody');
+                for (var i = 0; i < links.length; i++) {
+                    var l = links[i];
+                    var tr = document.createElement('tr');
+                    var tdId = document.createElement('td'); tdId.textContent = l.id || '';
+                    var tdW = document.createElement('td');
+                    tdW.innerHTML = '<div style="font-weight:800;">' + escapeHtml(l.where || '') + '</div><div class="viewer-small">' + escapeHtml(l.snippet || '') + '</div>';
+                    var tdV = document.createElement('td'); tdV.textContent = l.visible || '';
+                    var tdH = document.createElement('td'); tdH.textContent = l.href || '';
+                    var tdS = document.createElement('td');
+                    if (!l.signals || !l.signals.length) {
+                        tdS.innerHTML = '<span class="signal-badge">' + (currentLang === 'es' ? 'Sin senales' : 'No signals') + '</span>';
+                    } else {
+                        for (var j = 0; j < l.signals.length; j++) {
+                            var s = l.signals[j];
+                            var b = document.createElement('span');
+                            b.className = 'signal-badge ' + (s.level === 'high' ? 'signal-high' : 'signal-low');
+                            b.textContent = s.text;
+                            tdS.appendChild(b);
+                            if (j + 1 < l.signals.length) tdS.appendChild(document.createTextNode(' '));
+                        }
+                    }
+                    tr.appendChild(tdId);
+                    tr.appendChild(tdW);
+                    tr.appendChild(tdV);
+                    tr.appendChild(tdH);
+                    tr.appendChild(tdS);
+
+                    var tdA = document.createElement('td');
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-secondary';
+                    btn.textContent = currentLang === 'es' ? 'Copiar' : 'Copy';
+                    btn.addEventListener('click', function(href) { return function() { copyTextToClipboard(href); }; }(l.href || ''));
+                    tdA.appendChild(btn);
+
+                    tr.appendChild(tdA);
+                    tbody.appendChild(tr);
+                }
+                table.appendChild(tbody);
+                body.appendChild(table);
+            }
+
+            function formatBytes(n) {
+                n = Number(n || 0);
+                if (!isFinite(n) || n <= 0) return '0 B';
+                var u = ['B','KB','MB','GB'];
+                var i = Math.min(u.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
+                return (n / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + ' ' + u[i];
+            }
+
+            function renderAttachmentsPanel(msg) {
+                var body = document.getElementById('attachmentsBody');
+                var countEl = document.getElementById('attachmentsCount');
+                body.textContent = '';
+                var atts = (msg && msg.attachments) ? msg.attachments : [];
+                countEl.textContent = String(atts.length);
+                if (!atts.length) {
+                    var p = document.createElement('div');
+                    p.className = 'viewer-small';
+                    p.textContent = currentLang === 'es' ? 'No hay adjuntos.' : 'No attachments.';
+                    body.appendChild(p);
+                    return;
+                }
+                for (var i = 0; i < atts.length; i++) {
+                    (function(att){
+                        var row = document.createElement('div');
+                        row.className = 'att-row';
+                        var left = document.createElement('div');
+                        var name = document.createElement('div');
+                        name.className = 'att-name';
+                        name.textContent = att.name || '(attachment)';
+                        var meta = document.createElement('div');
+                        meta.className = 'att-meta';
+                        meta.textContent = (att.type || 'application/octet-stream') + ' • ' + formatBytes(att.size || 0);
+                        left.appendChild(name); left.appendChild(meta);
+                        var actions = document.createElement('div');
+                        actions.className = 'att-actions';
+
+                        var dl = document.createElement('button');
+                        dl.className = 'btn btn-secondary';
+                        dl.type = 'button';
+                        dl.textContent = currentLang === 'es' ? 'Descargar' : 'Download';
+                        dl.addEventListener('click', function(){
+                            var a = document.createElement('a');
+                            a.href = att.url;
+                            a.download = att.name || 'attachment';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                        });
+                        actions.appendChild(dl);
+
+                        var canPreview = /^image\//i.test(att.type) || /pdf$/i.test(att.type) || /^text\//i.test(att.type) || /json|xml|csv/i.test(att.type) || /html/i.test(att.type);
+                        if (canPreview) {
+                            var pv = document.createElement('button');
+                            pv.className = 'btn btn-secondary';
+                            pv.type = 'button';
+                            pv.textContent = currentLang === 'es' ? 'Ver' : 'Preview';
+                            pv.addEventListener('click', function(){ previewAttachment(att); });
+                            actions.appendChild(pv);
+                        }
+                        row.appendChild(left);
+                        row.appendChild(actions);
+                        body.appendChild(row);
+                    })(atts[i]);
+                }
+            }
+
+            function previewAttachment(att) {
+                if (!att || !att.url) return;
+                var frame = document.getElementById('viewerFrame');
+                var type = String(att.type || '');
+                if (/^image\//i.test(type)) {
+                    frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#111827;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img alt="preview" src="' + escapeHtml(att.url) + '" style="max-width:100%;max-height:100vh;"/></body></html>';
+                    return;
+                }
+                if (/pdf$/i.test(type)) {
+                    frame.removeAttribute('srcdoc');
+                    frame.src = att.url;
+                    return;
+                }
+                if (/html/i.test(type)) {
+                    // Preview HTML attachment through the same sanitizer.
+                    fetch(att.url).then(function(r){ return r.text(); }).then(function(txt){
+                        var built = buildViewerHtmlAndLinks(txt, (currentViewerMessage && currentViewerMessage.cidMap) || {}, { allowRemote: viewerAllowRemote });
+                        frame.srcdoc = built.html;
+                    });
+                    return;
+                }
+                // Text-ish
+                fetch(att.url).then(function(r){ return r.arrayBuffer(); }).then(function(ab){
+                    var bytes = new Uint8Array(ab);
+                    var text = decodeBytesToString(bytes, 'utf-8');
+                    frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"></head><body><pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Consolas,monospace;font-size:13px;line-height:1.45;padding:12px;">' + escapeHtml(text || '') + '</pre></body></html>';
+                });
             }
             function extractHeadersFromEml(rawEml) {
                 const text = String(rawEml || '').replace(/^\uFEFF/, '');
@@ -1610,12 +2492,116 @@ X-Mailer: Campaign Platform 4.2`
                 const fieldCount = (candidate.match(/^[!-9;-~]+:/gm) || []).length;
                 return headerLike || fieldCount >= 4 ? candidate.trim() : text.trim();
             }
+
+            function parseEmlToViewerMessage(rawEml) {
+                var text = String(rawEml || '').replace(/^\uFEFF/, '');
+                var split = text.split(/\r?\n\r?\n/);
+                var headerText = split.shift() || '';
+                var bodyText = split.join('\n\n');
+                var headers = parseHeaders(headerText);
+                var env = {
+                    subject: getHeader(headers, 'subject') || '',
+                    from: getHeader(headers, 'from') || '',
+                    to: getHeader(headers, 'to') || '',
+                    cc: getHeader(headers, 'cc') || '',
+                    date: getHeader(headers, 'date') || ''
+                };
+
+                var rootCt = parseHeaderParams(getHeader(headers, 'content-type') || 'text/plain');
+                var rootCte = (getHeader(headers, 'content-transfer-encoding') || '').toLowerCase();
+                var warnings = [];
+                var cidMap = {};
+                var attachments = [];
+                var bodies = { plain: '', html: '' };
+
+                function addAttachment(name, type, bytes) {
+                    var blob = new Blob([bytes], { type: type || 'application/octet-stream' });
+                    var url = safeBlobUrl(blob);
+                    attachments.push({ name: name || 'attachment', type: type || blob.type || 'application/octet-stream', size: bytes ? bytes.length : 0, url: url });
+                }
+
+                function parsePart(partHeadersRaw, partBodyRaw) {
+                    var h = parseHeaders(partHeadersRaw || '');
+                    var ct = parseHeaderParams(getHeader(h, 'content-type') || 'text/plain');
+                    var cte = (getHeader(h, 'content-transfer-encoding') || '').toLowerCase();
+                    var disp = parseHeaderParams(getHeader(h, 'content-disposition') || '');
+                    var contentId = (getHeader(h, 'content-id') || '').replace(/[<>]/g, '').trim();
+                    var charset = ct.params.charset || '';
+                    var filename = disp.params.filename || ct.params.name || '';
+
+                    if (ct.value && ct.value.indexOf('multipart/') === 0 && ct.params.boundary) {
+                        var b = ct.params.boundary;
+                        var boundary = '--' + b;
+                        var endBoundary = boundary + '--';
+                        var lines = String(partBodyRaw || '').split(/\r?\n/);
+                        var chunks = [];
+                        var cur = [];
+                        var inPart = false;
+                        for (var i = 0; i < lines.length; i++) {
+                            var line = lines[i];
+                            if (line === boundary) {
+                                if (inPart && cur.length) chunks.push(cur.join('\n'));
+                                cur = [];
+                                inPart = true;
+                                continue;
+                            }
+                            if (line === endBoundary) {
+                                if (inPart && cur.length) chunks.push(cur.join('\n'));
+                                break;
+                            }
+                            if (inPart) cur.push(line);
+                        }
+                        for (var j = 0; j < chunks.length; j++) {
+                            var piece = chunks[j];
+                            var s = piece.split(/\r?\n\r?\n/);
+                            var ph = s.shift() || '';
+                            var pb = s.join('\n\n');
+                            parsePart(ph, pb);
+                        }
+                        return;
+                    }
+
+                    var bytes = null;
+                    if (cte === 'base64') bytes = decodeBase64ToBytes(partBodyRaw);
+                    else if (cte === 'quoted-printable') bytes = decodeQuotedPrintableToBytes(partBodyRaw);
+                    else bytes = decodeQuotedPrintableToBytes(partBodyRaw); // 7bit/8bit: treat as bytes
+
+                    if (ct.value === 'text/plain') {
+                        bodies.plain = bodies.plain || decodeBytesToString(bytes, charset);
+                        return;
+                    }
+                    if (ct.value === 'text/html') {
+                        bodies.html = bodies.html || decodeBytesToString(bytes, charset);
+                        return;
+                    }
+
+                    if (contentId) {
+                        var blob = new Blob([bytes], { type: ct.value || 'application/octet-stream' });
+                        cidMap[contentId] = safeBlobUrl(blob);
+                    }
+
+                    if (filename || (disp.value && disp.value.indexOf('attachment') !== -1) || (ct.value && ct.value.indexOf('application/') === 0) || (ct.value && ct.value.indexOf('image/') === 0)) {
+                        addAttachment(filename || (contentId ? (contentId + '.bin') : 'attachment'), ct.value || 'application/octet-stream', bytes);
+                    }
+                }
+
+                // Root
+                if (rootCt.value && rootCt.value.indexOf('multipart/') === 0 && rootCt.params.boundary) {
+                    parsePart(headerText, bodyText);
+                } else {
+                    // Single-part message
+                    var rootBytes = null;
+                    if (rootCte === 'base64') rootBytes = decodeBase64ToBytes(bodyText);
+                    else if (rootCte === 'quoted-printable') rootBytes = decodeQuotedPrintableToBytes(bodyText);
+                    else rootBytes = decodeQuotedPrintableToBytes(bodyText);
+                    if (rootCt.value === 'text/html') bodies.html = decodeBytesToString(rootBytes, rootCt.params.charset || '');
+                    else bodies.plain = decodeBytesToString(rootBytes, rootCt.params.charset || '');
+                }
+
+                return { format: 'eml', envelope: env, headersRaw: headerText, bodies: bodies, cidMap: cidMap, attachments: attachments, links: [], warnings: warnings };
+            }
             function readEmlFile(file) {
                 if (!file) return;
-                if (file.size > MAX_INPUT_CHARS * 4) {
-                    alert(t('emlTooLarge'));
-                    return;
-                }
                 const reader = new FileReader();
                 reader.onload = function() {
                     const raw = String(reader.result || '');
@@ -1626,7 +2612,15 @@ X-Mailer: Campaign Platform 4.2`
                     }
                     const limited = extracted.length > MAX_INPUT_CHARS ? extracted.slice(0, MAX_INPUT_CHARS) : extracted;
                     if (!confirmOverwriteIfNeeded(limited)) return;
-                    loadHeadersIntoEditor(limited, { format: 'eml', note: null });
+                    loadHeadersIntoEditor(limited, { format: 'eml', note: null, autoAnalyze: true });
+
+                    try {
+                        var msg = parseEmlToViewerMessage(raw);
+                        renderViewerMessage(msg);
+                        setResultsTab('viewer');
+                    } catch (e) {
+                        // Viewer is best-effort; keep header analysis functional.
+                    }
                 };
                 reader.onerror = function() { alert(t('invalidEml')); };
                 reader.readAsText(file);
@@ -1644,10 +2638,6 @@ X-Mailer: Campaign Platform 4.2`
 
             function readMsgFile(file) {
                 if (!file) return;
-                if (file.size > MAX_INPUT_CHARS * 4) {
-                    alert(t('msgTooLarge'));
-                    return;
-                }
                 const reader = new FileReader();
                 reader.onload = function() {
                     try {
@@ -1660,7 +2650,54 @@ X-Mailer: Campaign Platform 4.2`
                         const limited = extracted.length > MAX_INPUT_CHARS ? extracted.slice(0, MAX_INPUT_CHARS) : extracted;
                         if (!confirmOverwriteIfNeeded(limited)) return;
                         const receivedCount = (limited.match(/\nReceived:/gi) || []).length + (limited.match(/^Received:/gmi) || []).length;
-                        loadHeadersIntoEditor(limited, { format: 'msg', note: t('msgReceivedNote'), receivedCount: receivedCount });
+                        loadHeadersIntoEditor(limited, { format: 'msg', note: t('msgReceivedNote'), receivedCount: receivedCount, autoAnalyze: true });
+
+                        // Viewer
+                        try {
+                            const info = (function(){
+                                if (!window.MsgReader) throw new Error('MsgReader not loaded');
+                                const msg = new window.MsgReader(ab);
+                                msg.parserConfig = { ansiEncoding: null, includeRawProps: false };
+                                return msg.getFileData();
+                            })();
+
+                            var env = {
+                                subject: (info && info.subject) ? String(info.subject) : '',
+                                from: (info && (info.senderEmail || info.senderName)) ? (String(info.senderName || '') + (info.senderEmail ? (' <' + info.senderEmail + '>') : '')).trim() : '',
+                                to: (info && info.recipients && info.recipients.length) ? info.recipients.map(function(r){ return (r.name ? (r.name + ' ') : '') + (r.email ? ('<' + r.email + '>') : ''); }).join(', ') : '',
+                                cc: '',
+                                date: (info && info.messageDeliveryTime) ? String(info.messageDeliveryTime) : ''
+                            };
+
+                            var bodies = { plain: '', html: '' };
+                            if (info && info.bodyHtml) bodies.html = String(info.bodyHtml);
+                            else if (info && info.body) bodies.plain = String(info.body);
+
+                            var attachments = [];
+                            if (info && info.attachments && info.attachments.length) {
+                                for (var i = 0; i < info.attachments.length; i++) {
+                                    try {
+                                        var att = (function(){
+                                            const msg2 = new window.MsgReader(ab);
+                                            msg2.parserConfig = { ansiEncoding: null, includeRawProps: false };
+                                            msg2.getFileData();
+                                            return msg2.getAttachment(i);
+                                        })();
+                                        if (att && att.content) {
+                                            var bytes = att.content instanceof Uint8Array ? att.content : new Uint8Array(att.content);
+                                            var blob = new Blob([bytes], { type: 'application/octet-stream' });
+                                            var url = safeBlobUrl(blob);
+                                            attachments.push({ name: att.fileName || ('attachment-' + (i + 1)), type: blob.type, size: bytes.length, url: url });
+                                        }
+                                    } catch (e) {}
+                                }
+                            }
+
+                            renderViewerMessage({ format: 'msg', envelope: env, headersRaw: limited, bodies: bodies, cidMap: {}, attachments: attachments, links: [], warnings: [t('msgReceivedNote')] });
+                            setResultsTab('viewer');
+                        } catch (e) {
+                            // ignore viewer errors
+                        }
                     } catch (e) {
                         alert(t('invalidMsg'));
                     }
@@ -1708,13 +2745,17 @@ X-Mailer: Campaign Platform 4.2`
             document.getElementById('loadSampleBtn').addEventListener('click', function() {
                 const nextSample = getSelectedSampleHeaders();
                 if (!confirmOverwriteIfNeeded(nextSample)) return;
-                loadHeadersIntoEditor(nextSample, { format: 'sample', note: null });
+                loadHeadersIntoEditor(nextSample, { format: 'sample', note: null, autoAnalyze: true });
+                setResultsTab('analysis');
             });
             document.getElementById('sampleSelect').addEventListener('change', updateSamplePreview);
             updateSamplePreview();
             document.getElementById('headersInput').addEventListener('keydown', function(e) {
                 if (e.ctrlKey && e.key === 'Enter') { analyzeHeaders(); }
             });
+
+            // Manual-only input should live in header analysis tab.
+            document.getElementById('analyzeBtn').addEventListener('click', function() { setResultsTab('analysis'); });
 
             function unfoldHeaders(raw) { return raw.replace(/\r\n[ \t]+/g, ' ').replace(/\n[ \t]+/g, ' '); }
             function parseHeaders(raw) {
@@ -3212,10 +4253,10 @@ X-Mailer: Campaign Platform 4.2`
                     navigator.clipboard.writeText(text).then(function() {
                         setIocsButtonState('copiedIocs');
                         setTimeout(function() { setIocsButtonState('copyIocs'); }, 1800);
-                    }).catch(function() { downloadText(text, 'email-iocs.txt'); });
+                    }).catch(function() { downloadText(text, 'header-data.txt'); });
                     return;
                 }
-                downloadText(text, 'email-iocs.txt');
+                downloadText(text, 'header-data.txt');
             };
 
             window.copyReport = function() {
@@ -3247,7 +4288,7 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index23';
+            const APP_VERSION = 'index35';
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
 
