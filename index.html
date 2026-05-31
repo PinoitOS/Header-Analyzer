@@ -345,6 +345,7 @@
             <button class="lang-btn" id="langEsBtn" type="button">ES</button>
             <button class="lang-btn" id="langEnBtn" type="button">EN</button>
         </div>
+        <button class="btn btn-secondary" id="remoteRepToggleBtn" type="button" style="padding:0.45rem 0.65rem; font-size:0.72rem; font-weight:850; letter-spacing:0.06em;">Reputacion remota: ON</button>
         <button class="theme-toggle" id="themeToggle" title="Toggle theme">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         </button>
@@ -965,6 +966,24 @@ safe-buffer/index.js:
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Remote reputation toggle (default ON).
+            (function(){
+                var btn = document.getElementById('remoteRepToggleBtn');
+                if (!btn) return;
+                // Initialize default.
+                try {
+                    var v = sessionStorage.getItem(REMOTE_REP_KEY);
+                    if (v !== '0' && v !== '1') sessionStorage.setItem(REMOTE_REP_KEY, '1');
+                } catch (e) {}
+                setRemoteReputationEnabled(getRemoteReputationEnabled());
+                btn.addEventListener('click', function() {
+                    var next = !getRemoteReputationEnabled();
+                    setRemoteReputationEnabled(next);
+                    if (currentHeadersRaw && String(currentHeadersRaw).trim()) {
+                        runAnalyzeViaWorker(currentHeadersRaw);
+                    }
+                });
+            })();
             // Turnstile gate (visible, once per session). This blocks the entire app until verified.
             // On GitHub Pages we cannot prevent copying the frontend, but we can protect the Worker API.
             var TS_SITE_KEY = '0x4AAAAAADbjMM4eywvB_PhV';
@@ -1187,11 +1206,14 @@ X-Mailer: Campaign Platform 4.2`
 
             let isDarkMode = true;
             let currentReportData = null;
+            let currentReportText = '';
+            let currentHeadersRaw = '';
             let currentInputMeta = { format: 'manual', note: null };
             const MAX_INPUT_CHARS = 100000;
             const MAX_REPORT_TEXT_CHARS = 250000;
             const REDACTED_VALUE = '[redacted]';
             const REPUTATION_API_BASE = 'https://pinoitos-headers-analyzer.analisis-forense-96.workers.dev';
+            const REMOTE_REP_KEY = 'rep_remote_v1';
             let currentLang = localStorage.getItem('lang') || 'es';
             const translations = {
                 es: {
@@ -2560,6 +2582,12 @@ X-Mailer: Campaign Platform 4.2`
                 if (!tbodyEl) return;
                 if (!Array.isArray(links) || !links.length) return;
 
+                if (!getRemoteReputationEnabled()) {
+                    var cellsOff = tbodyEl.querySelectorAll('td.rep-cell');
+                    for (var ciOff = 0; ciOff < cellsOff.length; ciOff++) cellsOff[ciOff].textContent = '-';
+                    return;
+                }
+
                 var urls = [];
                 var seen = Object.create(null);
                 for (var i = 0; i < links.length; i++) {
@@ -2590,7 +2618,7 @@ X-Mailer: Campaign Platform 4.2`
                 fetch(REPUTATION_API_BASE + '/api/reputation', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ urls: urls, turnstileToken: (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })(), context: { auth: (currentReportData && currentReportData.authResults) ? { spf: currentReportData.authResults.spf, dkim: currentReportData.authResults.dkim, dmarc: currentReportData.authResults.dmarc } : {} } })
+                    body: JSON.stringify({ urls: urls, reputationRemoteEnabled: true, turnstileToken: (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })(), context: { auth: (currentReportData && currentReportData.authResults) ? { spf: currentReportData.authResults.spf, dkim: currentReportData.authResults.dkim, dmarc: currentReportData.authResults.dmarc } : {} } })
                 }).then(function(r) {
                     if (r && r.status === 403) {
                         try { sessionStorage.removeItem('ts_ok_v1'); } catch (e) {}
@@ -3419,6 +3447,17 @@ X-Mailer: Campaign Platform 4.2`
                 if (!validateHeadersInput(rawOriginal)) return;
                 const raw = rawOriginal.trim();
                 if (!raw) return;
+
+                // v42: analysis is performed server-side (Worker). Keep UI flow identical.
+                currentHeadersRaw = rawOriginal;
+                currentReportData = null;
+                currentReportText = '';
+                document.body.classList.add('report-mode');
+                document.body.classList.remove('input-open');
+                document.getElementById('emptyState').classList.add('hidden');
+                runAnalyzeViaWorker(rawOriginal);
+                return;
+
                 document.body.classList.add('report-mode');
                 document.body.classList.remove('input-open');
                 document.getElementById('emptyState').classList.add('hidden');
@@ -4482,6 +4521,82 @@ X-Mailer: Campaign Platform 4.2`
                 if (result === 'none' || result === 'neutral') return 'none';
                 return 'warn';
             }
+
+            function getRemoteReputationEnabled() {
+                try {
+                    const v = sessionStorage.getItem(REMOTE_REP_KEY);
+                    if (v === '0') return false;
+                    if (v === '1') return true;
+                } catch (e) {}
+                // Default ON.
+                return true;
+            }
+
+            function setRemoteReputationEnabled(on) {
+                try { sessionStorage.setItem(REMOTE_REP_KEY, on ? '1' : '0'); } catch (e) {}
+                const btn = document.getElementById('remoteRepToggleBtn');
+                if (btn) {
+                    btn.textContent = currentLang === 'es' ? ('Reputacion remota: ' + (on ? 'ON' : 'OFF')) : ('Remote reputation: ' + (on ? 'ON' : 'OFF'));
+                }
+            }
+
+            function runAnalyzeViaWorker(headersRaw) {
+                const statusEl = document.getElementById('emptyState');
+                const container = document.getElementById('reportContainer');
+                const remoteOn = getRemoteReputationEnabled();
+
+                // Basic UI: clear and show a minimal status line.
+                if (container) container.textContent = '';
+                if (statusEl) {
+                    statusEl.classList.remove('hidden');
+                    statusEl.textContent = remoteOn ? (currentLang === 'es' ? 'Consultando reputacion...' : 'Querying reputation...') : (currentLang === 'es' ? 'Analizando...' : 'Analyzing...');
+                }
+
+                const token = (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })();
+                fetch(REPUTATION_API_BASE + '/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ headersRaw: String(headersRaw || ''), lang: currentLang, reputationRemoteEnabled: remoteOn, turnstileToken: token })
+                }).then(function(r) {
+                    if (r && r.status === 429) {
+                        const ra = Number(r.headers && r.headers.get('Retry-After'));
+                        const sec = isFinite(ra) && ra > 0 ? ra : 10;
+                        if (statusEl) statusEl.textContent = (currentLang === 'es' ? 'Demasiadas solicitudes. Espera ' : 'Too many requests. Wait ') + sec + (currentLang === 'es' ? 's y reintenta.' : 's and retry.');
+                        throw new Error('rate_limited');
+                    }
+                    if (r && r.status === 403) {
+                        try { sessionStorage.removeItem('ts_ok_v1'); } catch (e) {}
+                        try { sessionStorage.removeItem('ts_token_v1'); } catch (e) {}
+                        throw new Error('turnstile_required');
+                    }
+                    return r.json();
+                }).then(function(resp) {
+                    currentReportText = String((resp && resp.reportText) || '');
+                    currentReportData = (resp && resp.reportData) ? resp.reportData : null;
+                    if (container) {
+                        container.innerHTML = String((resp && resp.reportHtml) || '');
+                        // Rebind bottom actions if present.
+                        var bottomCopyBtn = document.getElementById('bottomCopyBtn');
+                        if (bottomCopyBtn) bottomCopyBtn.addEventListener('click', function() { if (window.copyReport) window.copyReport(); });
+                        var bottomIocsBtn = document.getElementById('bottomIocsBtn');
+                        if (bottomIocsBtn) bottomIocsBtn.addEventListener('click', function() { if (window.copyIocs) window.copyIocs(); });
+                        var bottomPdfBtn = document.getElementById('bottomPdfBtn');
+                        if (bottomPdfBtn) bottomPdfBtn.addEventListener('click', function() { if (window.generatePdfReport) window.generatePdfReport(); });
+                        var bottomJsonBtn = document.getElementById('bottomJsonBtn');
+                        if (bottomJsonBtn) bottomJsonBtn.addEventListener('click', function() { if (window.exportReportJson) window.exportReportJson({ includeRaw: false }); });
+                        var bottomJsonRawBtn = document.getElementById('bottomJsonRawBtn');
+                        if (bottomJsonRawBtn) bottomJsonRawBtn.addEventListener('click', function() { if (window.exportReportJson) window.exportReportJson({ includeRaw: true }); });
+                    }
+                    if (statusEl) statusEl.classList.add('hidden');
+                }).catch(function(err) {
+                    if (String(err && err.message || '').indexOf('turnstile_required') !== -1) {
+                        // Force gate again.
+                        location.reload();
+                        return;
+                    }
+                    if (statusEl && !statusEl.textContent) statusEl.textContent = (currentLang === 'es' ? 'Error analizando.' : 'Analysis failed.');
+                });
+            }
             function getFindingIcon(type) { if (type === 'ok') return 'OK'; if (type === 'fail') return 'X'; if (type === 'warn') return 'W'; return 'I'; }
             function escapeHtml(str) {
                 if (!str) return '';
@@ -4638,7 +4753,7 @@ X-Mailer: Campaign Platform 4.2`
                 fetch(REPUTATION_API_BASE + '/api/reputation', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ips: ips, hosts: hosts, domains: domains, urls: urls, turnstileToken: (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })(), context: { auth: auth, ms: ms, main: main } })
+                    body: JSON.stringify({ ips: ips, hosts: hosts, domains: domains, urls: urls, reputationRemoteEnabled: getRemoteReputationEnabled(), turnstileToken: (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })(), context: { auth: auth, ms: ms, main: main } })
                 }).then(function(r) {
                     if (r && r.status === 403) {
                         try { sessionStorage.removeItem('ts_ok_v1'); } catch (e) {}
@@ -4843,17 +4958,11 @@ X-Mailer: Campaign Platform 4.2`
             };
 
             window.copyReport = function() {
-                const data = currentReportData;
-                if (!data) return;
-                const riskLabels = currentLang === 'es' ? { low: 'RIESGO BAJO', medium: 'RIESGO MEDIO', high: 'RIESGO ALTO' } : { low: 'LOW RISK', medium: 'MEDIUM RISK', high: 'HIGH RISK' };
-                let report = '=====================================\n   ' + (currentLang === 'es' ? 'ANALISIS DE CABECERAS DE CORREO' : 'EMAIL HEADER ANALYSIS') + '\n=====================================\n\n' + t('risk') + ': ' + data.score + '/15 - ' + (riskLabels[data.riskLevel] || data.riskLevel.toUpperCase()) + '\n\n-----------------------------------\n' + t('securityFindings').toUpperCase() + '\n-----------------------------------\n';
-                for (const f of data.findings) { const icon = f.type === 'ok' ? '[PASS]' : f.type === 'fail' ? '[FAIL]' : f.type === 'warn' ? '[WARN]' : '[INFO]'; report += icon + ' ' + f.text + '\n'; }
-                report += '\n-----------------------------------\n' + t('authentication').toUpperCase() + '\n-----------------------------------\nSPF: ' + data.authResults.spf.toUpperCase() + '\nDKIM: ' + data.authResults.dkim.toUpperCase() + '\nDMARC: ' + data.authResults.dmarc.toUpperCase() + '\n';
-                report += '\n-----------------------------------\n' + t('details').toUpperCase() + '\n-----------------------------------\nFrom: ' + (data.from || 'N/A') + '\nEnvelope: ' + (data.envelopeHeader || 'N/A') + '\nTo: ' + (data.to || 'N/A') + '\nSubject: ' + (data.subject || 'N/A') + '\nReturn-Path: ' + (data.returnPath || 'N/A') + '\n';
-                if (data.receivedHops && data.receivedHops.length > 0) { report += '\n-----------------------------------\n' + t('deliveryRoute').toUpperCase() + '\n-----------------------------------\n'; for (let i = 0; i < data.receivedHops.length; i++) { const hop = data.receivedHops[i]; report += '[' + (i + 1) + '] ' + (hop.from || 'unknown') + ' -> ' + (hop.by || 'unknown') + '\n'; if (hop.ip) report += '    IP: ' + hop.ip + ' (' + (hop.ipType || 'unknown') + ')\n'; if (hop.delay !== undefined) report += '    ' + (currentLang === 'es' ? 'Demora' : 'Delay') + ': ' + hop.delay + 's\n'; if (hop.alerts && hop.alerts.length) report += '    ' + t('alerts') + ': ' + hop.alerts.join(' | ') + '\n'; } }
-                report += '\n=====================================\n';
+                const report = String(currentReportText || '');
+                if (!report) return;
+                var baseName = pdfEscapeNamePart((currentReportData && currentReportData.subject) || 'email-header-analysis');
                 if (report.length > MAX_REPORT_TEXT_CHARS) {
-                    downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
+                    downloadText(report, baseName + '-report.txt');
                     return;
                 }
                 if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -4863,15 +4972,13 @@ X-Mailer: Campaign Platform 4.2`
                             btn.textContent = t('copied') + '!';
                             setTimeout(function() { btn.textContent = t('copyReport'); }, 2000);
                         }
-                    }).catch(function() {
-                        downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
-                    });
+                    }).catch(function() { downloadText(report, baseName + '-report.txt'); });
                     return;
                 }
-                downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
+                downloadText(report, baseName + '-report.txt');
             };
 
-            const APP_VERSION = 'index41';
+            const APP_VERSION = 'index42';
 
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
@@ -4925,31 +5032,44 @@ X-Mailer: Campaign Platform 4.2`
 
             window.exportReportJson = function(opts) {
                 const includeRaw = !!(opts && opts.includeRaw);
-                const src = currentReportData;
-                if (!src) return;
-
+                if (!currentHeadersRaw || !String(currentHeadersRaw).trim()) return;
                 if (includeRaw) {
                     if (!confirm(t('exportJsonConfirm'))) return;
                 }
 
-                // Clone to a JSON-safe object before sanitization.
-                const base = includeRaw ? JSON.parse(JSON.stringify(src)) : sanitizeReportDataForExport(src);
-                const notes = [];
-                const out = truncateDeep(base, '$', notes);
-                out.schemaVersion = EXPORT_SCHEMA_VERSION;
-                out.reportMeta = {
-                    exportedAt: new Date().toISOString(),
-                    appVersion: APP_VERSION,
-                    lang: currentLang,
-                    theme: document.body.classList.contains('light') ? 'light' : 'dark',
-                    sanitized: !includeRaw,
-                    truncateLimit: EXPORT_TRUNCATE_LIMIT
-                };
-                if (notes.length) out.truncationNotes = notes;
+                const remoteOn = getRemoteReputationEnabled();
+                const token = (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })();
 
-                const baseName = pdfEscapeNamePart((src && src.subject) || 'email-header-analysis') + '-' + new Date().toISOString().slice(0, 10);
-                const filename = baseName + (includeRaw ? '-raw' : '') + '.json';
-                downloadJson(out, filename);
+                fetch(REPUTATION_API_BASE + '/api/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        headersRaw: String(currentHeadersRaw || ''),
+                        lang: currentLang,
+                        reputationRemoteEnabled: remoteOn,
+                        format: includeRaw ? 'jsonRaw' : 'json',
+                        turnstileToken: token
+                    })
+                }).then(function(r) {
+                    if (r && r.status === 429) {
+                        const ra = Number(r.headers && r.headers.get('Retry-After'));
+                        const sec = isFinite(ra) && ra > 0 ? ra : 10;
+                        alert((currentLang === 'es' ? 'Demasiadas solicitudes. Espera ' : 'Too many requests. Wait ') + sec + (currentLang === 'es' ? 's y reintenta.' : 's and retry.'));
+                        throw new Error('rate_limited');
+                    }
+                    if (r && r.status === 403) {
+                        try { sessionStorage.removeItem('ts_ok_v1'); } catch (e) {}
+                        try { sessionStorage.removeItem('ts_token_v1'); } catch (e) {}
+                        throw new Error('turnstile_required');
+                    }
+                    return r.json();
+                }).then(function(out) {
+                    const baseName = pdfEscapeNamePart(((currentReportData && currentReportData.subject) || 'email-header-analysis')) + '-' + new Date().toISOString().slice(0, 10);
+                    const filename = baseName + (includeRaw ? '-raw' : '') + '.json';
+                    downloadJson(out, filename);
+                }).catch(function(err) {
+                    if (String(err && err.message || '').indexOf('turnstile_required') !== -1) location.reload();
+                });
             };
 
             function pdfHexText(text) {
@@ -5043,6 +5163,42 @@ X-Mailer: Campaign Platform 4.2`
                 }
                 return lines;
             }
+
+            function buildPdfLinesFromText(text) {
+                var isEs = currentLang === 'es';
+                var s = String(text == null ? '' : text);
+                var rawLines = s.split(/\r?\n/);
+                var lines = [];
+                for (var i = 0; i < rawLines.length; i++) {
+                    var ln = rawLines[i];
+                    if (ln == null) ln = '';
+                    var tline = String(ln);
+                    if (!tline) {
+                        lines.push({ text: ' ', size: 9 });
+                        continue;
+                    }
+                    if (/^=+\s*$/.test(tline)) {
+                        lines.push({ text: tline, size: 8 });
+                        continue;
+                    }
+                    if (/^-+\s*$/.test(tline)) {
+                        lines.push({ text: tline, size: 8 });
+                        continue;
+                    }
+                    if (tline.indexOf('EMAIL HEADER ANALYSIS') !== -1 || tline.indexOf('ANALISIS DE CABECERAS') !== -1) {
+                        lines.push({ text: tline, size: 17, bold: true, gapBefore: 4 });
+                        continue;
+                    }
+                    // Section headers are usually uppercase.
+                    var up = tline.toUpperCase();
+                    if (tline.length > 6 && tline === up && /[A-Z]/.test(tline)) {
+                        lines.push({ text: tline, size: 13, bold: true, gapBefore: 10 });
+                        continue;
+                    }
+                    lines.push({ text: tline, size: 9 });
+                }
+                return lines;
+            }
             function renderPdfPages(lines) {
                 var pages = [];
                 var current = [];
@@ -5099,10 +5255,10 @@ X-Mailer: Campaign Platform 4.2`
                 return pdf;
             }
             window.generatePdfReport = function() {
-                var data = currentReportData;
-                if (!data) return;
-                var fileTitle = pdfEscapeNamePart(data.subject || 'email-header-analysis') + '-' + new Date().toISOString().slice(0, 10);
-                var lines = buildPdfLines(data);
+                var report = String(currentReportText || '');
+                if (!report) return;
+                var fileTitle = pdfEscapeNamePart((currentReportData && currentReportData.subject) || 'email-header-analysis') + '-' + new Date().toISOString().slice(0, 10);
+                var lines = buildPdfLinesFromText(report);
                 var pdf = buildPdfDocument(lines);
                 var blob = new Blob([pdf], { type: 'application/pdf' });
                 var url = URL.createObjectURL(blob);
