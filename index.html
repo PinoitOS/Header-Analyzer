@@ -316,9 +316,28 @@
             .rep-table th, .rep-table td { padding: 0.7rem 0.65rem; }
             .rep-reasons { font-size: 0.74rem; }
         }
+
+        /* Turnstile gate (blocks entire app until verified) */
+        .gate-overlay { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; padding: 18px; background: radial-gradient(1200px 700px at 20% -10%, rgba(25,199,212,0.14), transparent), radial-gradient(900px 600px at 85% 0%, rgba(139,92,246,0.16), transparent), #060b16; }
+        .gate-overlay.is-open { display: flex; }
+        .gate-card { width: min(620px, 100%); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; background: rgba(255,255,255,0.04); box-shadow: 0 26px 90px rgba(0,0,0,0.55); padding: 18px 18px 16px; }
+        .gate-title { font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.85rem; margin-bottom: 8px; opacity: 0.95; }
+        .gate-sub { font-size: 0.95rem; line-height: 1.45; color: rgba(229,231,235,0.9); margin: 0 0 14px; }
+        .gate-note { font-size: 0.82rem; color: rgba(229,231,235,0.72); margin-top: 12px; line-height: 1.45; }
+        .gate-err { margin-top: 12px; font-size: 0.88rem; color: #fecaca; display: none; }
     </style>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
+    <div id="gateOverlay" class="gate-overlay" aria-live="polite">
+        <div class="gate-card">
+            <div class="gate-title">Verificacion requerida | Verification required</div>
+            <div class="gate-sub">Este sitio requiere verificacion (1 vez por sesion) para reducir abuso y clones. | This site requires verification (once per session) to reduce abuse and cloning.</div>
+            <div id="tsWidget"></div>
+            <div id="gateErr" class="gate-err">Fallo de verificacion. Recarga la pagina. | Verification failed. Reload the page.</div>
+            <div class="gate-note">Nota: el frontend puede copiarse (GitHub Pages), pero la API del Worker queda protegida. | Note: the frontend can be copied (GitHub Pages), but the Worker API is protected.</div>
+        </div>
+    </div>
     <header class="header">
         <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
         <h1 id="appTitle">Email Header Analyzer</h1>
@@ -946,6 +965,79 @@ safe-buffer/index.js:
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Turnstile gate (visible, once per session). This blocks the entire app until verified.
+            // On GitHub Pages we cannot prevent copying the frontend, but we can protect the Worker API.
+            var TS_SITE_KEY = '0x4AAAAAADbjMM4eywvB_PhV';
+            var TS_OK_KEY = 'ts_ok_v1';
+            var TS_TOKEN_KEY = 'ts_token_v1';
+            var TS_EXPECT_HOST = 'pinoitos.github.io';
+            window.__HA_CANARY__ = 'PinoitOS.HeaderAnalyzer.canary.v40.2026-05-31';
+
+            function openGate() {
+                var ov = document.getElementById('gateOverlay');
+                if (ov) ov.classList.add('is-open');
+            }
+            function closeGate() {
+                var ov = document.getElementById('gateOverlay');
+                if (ov) ov.classList.remove('is-open');
+            }
+            function showGateErr() {
+                var e = document.getElementById('gateErr');
+                if (e) e.style.display = 'block';
+            }
+            function hasToken() {
+                try {
+                    var ok = sessionStorage.getItem(TS_OK_KEY) === '1';
+                    var tok = sessionStorage.getItem(TS_TOKEN_KEY) || '';
+                    return ok && tok && tok.length > 10;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            // Disuasion: only intended to run on the canonical GitHub Pages hostname.
+            if (location.hostname !== TS_EXPECT_HOST) {
+                openGate();
+                var w = document.getElementById('tsWidget');
+                if (w) {
+                    w.textContent = '';
+                    var p = document.createElement('div');
+                    p.style.cssText = 'padding:10px 12px;border:1px solid rgba(255,255,255,0.12);border-radius:12px;background:rgba(0,0,0,0.25);font-size:0.95rem;line-height:1.45;';
+                    p.textContent = 'Bloqueo anti-clon: este sitio solo debe ejecutarse en ' + TS_EXPECT_HOST + ' | Anti-clone lock: this site must run on ' + TS_EXPECT_HOST;
+                    w.appendChild(p);
+                }
+                return;
+            }
+
+            if (!hasToken()) {
+                openGate();
+                (function waitTurnstile() {
+                    if (!window.turnstile || !window.turnstile.render) {
+                        setTimeout(waitTurnstile, 50);
+                        return;
+                    }
+                    try {
+                        window.turnstile.render('#tsWidget', {
+                            sitekey: TS_SITE_KEY,
+                            theme: 'dark',
+                            callback: function(tok) {
+                                if (!tok) { showGateErr(); return; }
+                                try { sessionStorage.setItem(TS_OK_KEY, '1'); } catch (e) {}
+                                try { sessionStorage.setItem(TS_TOKEN_KEY, String(tok)); } catch (e) {}
+                                // Start app clean with a valid session token.
+                                location.reload();
+                            },
+                            'error-callback': function() { showGateErr(); },
+                            'expired-callback': function() { showGateErr(); }
+                        });
+                    } catch (e) {
+                        showGateErr();
+                    }
+                })();
+                return;
+            }
+            closeGate();
+
             const sampleHeaders = {
                 legitimate: `Delivered-To: analyst@example.net
 Received: by NAM12-DM6-obe.outbound.protection.outlook.com (2603:10b6:8:15e::14)
@@ -2498,8 +2590,13 @@ X-Mailer: Campaign Platform 4.2`
                 fetch(REPUTATION_API_BASE + '/api/reputation', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ urls: urls, context: { auth: (currentReportData && currentReportData.authResults) ? { spf: currentReportData.authResults.spf, dkim: currentReportData.authResults.dkim, dmarc: currentReportData.authResults.dmarc } : {} } })
+                    body: JSON.stringify({ urls: urls, turnstileToken: (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })(), context: { auth: (currentReportData && currentReportData.authResults) ? { spf: currentReportData.authResults.spf, dkim: currentReportData.authResults.dkim, dmarc: currentReportData.authResults.dmarc } : {} } })
                 }).then(function(r) {
+                    if (r && r.status === 403) {
+                        try { sessionStorage.removeItem('ts_ok_v1'); } catch (e) {}
+                        try { sessionStorage.removeItem('ts_token_v1'); } catch (e) {}
+                        throw new Error('turnstile_required');
+                    }
                     return r.json();
                 }).then(function(rep) {
                     try { sessionStorage.setItem(cacheKey, JSON.stringify(rep)); } catch (e) {}
@@ -4541,8 +4638,13 @@ X-Mailer: Campaign Platform 4.2`
                 fetch(REPUTATION_API_BASE + '/api/reputation', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ips: ips, hosts: hosts, domains: domains, urls: urls, context: { auth: auth, ms: ms, main: main } })
+                    body: JSON.stringify({ ips: ips, hosts: hosts, domains: domains, urls: urls, turnstileToken: (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })(), context: { auth: auth, ms: ms, main: main } })
                 }).then(function(r) {
+                    if (r && r.status === 403) {
+                        try { sessionStorage.removeItem('ts_ok_v1'); } catch (e) {}
+                        try { sessionStorage.removeItem('ts_token_v1'); } catch (e) {}
+                        throw new Error('turnstile_required');
+                    }
                     return r.json();
                 }).then(function(rep) {
                     try { sessionStorage.setItem(cacheKey, JSON.stringify(rep)); } catch (e) {}
@@ -4769,7 +4871,7 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index38';
+            const APP_VERSION = 'index40';
 
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
