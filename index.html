@@ -2192,6 +2192,15 @@ X-Mailer: Campaign Platform 4.2`
                 return m ? m[0].toLowerCase() : null;
             }
 
+            function normHost(host) {
+                host = String(host || '').trim().toLowerCase();
+                if (!host) return '';
+                host = host.replace(/^https?:\/\//, '');
+                host = host.split('/')[0].split('?')[0].split('#')[0];
+                host = host.replace(/\.$/, '');
+                if (!/^[a-z0-9.-]+$/.test(host)) return '';
+                return host;
+            }
             function stripWww(host) { return host ? host.replace(/^www\./i, '').toLowerCase() : host; }
 
             function isClearlySubdomainOf(host, base) {
