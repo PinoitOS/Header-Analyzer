@@ -430,6 +430,10 @@
                                 <div class="viewer-side-body" id="linksBody"></div>
                             </div>
                             <div class="viewer-side-card">
+                                <div class="viewer-side-head"><div class="viewer-side-title" id="shortenersTitle">Short URLs</div><div class="viewer-small" id="shortenersCount">0</div></div>
+                                <div class="viewer-side-body" id="shortenersBody"></div>
+                            </div>
+                            <div class="viewer-side-card">
                                 <div class="viewer-side-head"><div class="viewer-side-title" id="attachmentsTitle">Attachments</div><div class="viewer-small" id="attachmentsCount">0</div></div>
                                 <div class="viewer-side-body" id="attachmentsBody"></div>
                             </div>
@@ -1192,6 +1196,23 @@ X-Mailer: Campaign Platform 4.2`
             const MAX_REPORT_TEXT_CHARS = 250000;
             const REDACTED_VALUE = '[redacted]';
             const REPUTATION_API_BASE = 'https://pinoitos-headers-analyzer.analisis-forense-96.workers.dev';
+            const KNOWN_SHORTENER_PROVIDERS = {
+                'bit.ly': 'bit.ly',
+                'tinyurl.com': 'tinyurl',
+                't.co': 't.co',
+                'ow.ly': 'ow.ly',
+                'buff.ly': 'buff.ly',
+                'rebrand.ly': 'rebrand.ly',
+                'cutt.ly': 'cutt.ly',
+                'tiny.cc': 'tiny.cc',
+                'is.gd': 'is.gd',
+                'soo.gd': 'soo.gd',
+                'lnkd.in': 'lnkd.in',
+                'trib.al': 'trib.al',
+                'ift.tt': 'ift.tt',
+                'amzn.to': 'amzn.to',
+                'youtu.be': 'youtu.be'
+            };
             let currentLang = localStorage.getItem('lang') || 'es';
             const translations = {
                 es: {
@@ -1210,12 +1231,29 @@ X-Mailer: Campaign Platform 4.2`
                 viewerText: 'Texto',
                 // viewerCopyLinks removed (redundant with viewerCopyIocs)
                 viewerLinks: 'Enlaces',
+                viewerShorteners: 'Acortadores URL',
                 viewerAttachments: 'Adjuntos',
                 viewerSubject: 'Asunto',
                 viewerFrom: 'De',
                 viewerTo: 'Para',
                 viewerCc: 'Cc',
-                viewerDate: 'Fecha'
+                viewerDate: 'Fecha',
+                shortenersNone: 'No se detectaron acortadores conocidos en el cuerpo.',
+                shortenersProvider: 'Proveedor',
+                shortenersShortUrl: 'URL corta',
+                shortenersFinalUrl: 'URL final',
+                shortenersFinalHost: 'Host final',
+                shortenersRedirects: 'Saltos',
+                shortenersStatus: 'Estado',
+                shortenersFinalReputation: 'Reputacion final',
+                shortenersDecodePending: 'Pendiente',
+                shortenersDecodeOk: 'Resuelto',
+                shortenersDecodeFailed: 'Fallo',
+                shortenersDecodeTimeout: 'Timeout',
+                shortenersDecodeBlocked: 'Bloqueado',
+                shortenersDecodeMaxRedirects: 'Max redirects',
+                shortenersDecodeInvalid: 'Invalida',
+                shortenersDecodeNotAttempted: 'No intentado'
             });
             Object.assign(translations.en, {
                 viewerTab: 'Email viewer',
@@ -1224,12 +1262,29 @@ X-Mailer: Campaign Platform 4.2`
                 viewerText: 'Text',
                 // viewerCopyLinks removed (redundant with viewerCopyIocs)
                 viewerLinks: 'Links',
+                viewerShorteners: 'Short URLs',
                 viewerAttachments: 'Attachments',
                 viewerSubject: 'Subject',
                 viewerFrom: 'From',
                 viewerTo: 'To',
                 viewerCc: 'Cc',
-                viewerDate: 'Date'
+                viewerDate: 'Date',
+                shortenersNone: 'No known shorteners detected in body.',
+                shortenersProvider: 'Provider',
+                shortenersShortUrl: 'Short URL',
+                shortenersFinalUrl: 'Final URL',
+                shortenersFinalHost: 'Final host',
+                shortenersRedirects: 'Redirects',
+                shortenersStatus: 'Status',
+                shortenersFinalReputation: 'Final reputation',
+                shortenersDecodePending: 'Pending',
+                shortenersDecodeOk: 'Resolved',
+                shortenersDecodeFailed: 'Failed',
+                shortenersDecodeTimeout: 'Timeout',
+                shortenersDecodeBlocked: 'Blocked',
+                shortenersDecodeMaxRedirects: 'Max redirects',
+                shortenersDecodeInvalid: 'Invalid',
+                shortenersDecodeNotAttempted: 'Not attempted'
             });
 
             // Differentiate header IOCs vs viewer IOCs.
@@ -1607,6 +1662,7 @@ X-Mailer: Campaign Platform 4.2`
                 document.getElementById('tabViewerLabel').textContent = t('viewerTab');
                 document.getElementById('tabAnalysisLabel').textContent = t('analysisTab');
                 document.getElementById('linksTitle').textContent = t('viewerLinks');
+                document.getElementById('shortenersTitle').textContent = t('viewerShorteners');
                 document.getElementById('attachmentsTitle').textContent = t('viewerAttachments');
                 document.getElementById('viewerShowHtmlBtn').textContent = t('viewerHtml');
                 document.getElementById('viewerShowTextBtn').textContent = t('viewerText');
@@ -1864,11 +1920,14 @@ X-Mailer: Campaign Platform 4.2`
                 updateRemoteLegend();
                 revokeObjectUrls();
                 currentViewerMessage = null;
+                currentViewerReputation = null;
                 var frame = document.getElementById('viewerFrame');
                 if (frame) { frame.removeAttribute('srcdoc'); frame.src = 'about:blank'; }
                 document.getElementById('linksBody').textContent = '';
+                document.getElementById('shortenersBody').textContent = '';
                 document.getElementById('attachmentsBody').textContent = '';
                 document.getElementById('linksCount').textContent = '0';
+                document.getElementById('shortenersCount').textContent = '0';
                 document.getElementById('attachmentsCount').textContent = '0';
                 document.getElementById('viewerWarnings').textContent = '';
             });
@@ -1891,11 +1950,14 @@ X-Mailer: Campaign Platform 4.2`
                 updateRemoteLegend();
                 revokeObjectUrls();
                 currentViewerMessage = null;
+                currentViewerReputation = null;
                 var frame = document.getElementById('viewerFrame');
                 if (frame) { frame.removeAttribute('srcdoc'); frame.src = 'about:blank'; }
                 document.getElementById('linksBody').textContent = '';
+                document.getElementById('shortenersBody').textContent = '';
                 document.getElementById('attachmentsBody').textContent = '';
                 document.getElementById('linksCount').textContent = '0';
+                document.getElementById('shortenersCount').textContent = '0';
                 document.getElementById('attachmentsCount').textContent = '0';
                 document.getElementById('viewerWarnings').textContent = '';
             });
@@ -1925,9 +1987,24 @@ X-Mailer: Campaign Platform 4.2`
             }
 
             var currentViewerMessage = null;
+            var currentViewerReputation = null;
             var currentViewerMode = 'html';
             var currentObjectUrls = [];
             var viewerAllowRemote = localStorage.getItem('viewer_allow_remote') === '1';
+
+            function getKnownShortenerProvider(host) {
+                host = stripWww(normHost(host));
+                if (!host) return null;
+                return KNOWN_SHORTENER_PROVIDERS[host] || null;
+            }
+
+            function enrichLinkWithShortenerMeta(link) {
+                if (!link || typeof link !== 'object') return link;
+                var provider = getKnownShortenerProvider(link.hrefHost);
+                link.isShortener = !!provider;
+                link.shortenerProvider = provider || null;
+                return link;
+            }
 
             function setResultsTab(tab) {
                 var viewerBtn = document.getElementById('tabViewer');
@@ -2180,7 +2257,7 @@ X-Mailer: Campaign Platform 4.2`
                             if (/@/.test(hrefRaw)) signals.push({ level: 'low', text: '@ in URL' });
                         }
                     }
-                    links.push({ visible: visible, href: hrefRaw, visibleHost: visibleHost, hrefHost: hrefHost, signals: signals, confidence: confidence });
+                    links.push(enrichLinkWithShortenerMeta({ visible: visible, href: hrefRaw, visibleHost: visibleHost, hrefHost: hrefHost, signals: signals, confidence: confidence }));
                 }
                 return links;
             }
@@ -2297,7 +2374,7 @@ X-Mailer: Campaign Platform 4.2`
                         }
                     }
 
-                    links.push({ id: id, where: hint, snippet: snippet, visible: visible, href: hrefRaw, visibleHost: visibleHost, hrefHost: hrefHost, signals: signals, confidence: confidence, kind: (a.querySelector && a.querySelector('img')) ? 'image-link' : 'text-link' });
+                    links.push(enrichLinkWithShortenerMeta({ id: id, where: hint, snippet: snippet, visible: visible, href: hrefRaw, visibleHost: visibleHost, hrefHost: hrefHost, signals: signals, confidence: confidence, kind: (a.querySelector && a.querySelector('img')) ? 'image-link' : 'text-link' }));
                 }
 
                 // Sanitize attributes.
@@ -2377,6 +2454,7 @@ X-Mailer: Campaign Platform 4.2`
             function renderViewerMessage(msg) {
                 revokeObjectUrls();
                 currentViewerMessage = msg;
+                currentViewerReputation = null;
                 currentViewerMode = (msg && msg.bodies && msg.bodies.html) ? 'html' : 'text';
 
                 var env = (msg && msg.envelope) ? msg.envelope : {};
@@ -2554,6 +2632,105 @@ X-Mailer: Campaign Platform 4.2`
 
                 // Enrich links with online reputation (URL items)
                 try { startViewerLinksReputation(links, tbody); } catch (e) {}
+                renderShortenersPanel(msg, currentViewerReputation);
+            }
+
+            function formatShortenerDecodeStatus(status) {
+                var keyMap = {
+                    ok: 'shortenersDecodeOk',
+                    failed: 'shortenersDecodeFailed',
+                    timeout: 'shortenersDecodeTimeout',
+                    blocked: 'shortenersDecodeBlocked',
+                    max_redirects: 'shortenersDecodeMaxRedirects',
+                    invalid_url: 'shortenersDecodeInvalid',
+                    not_attempted: 'shortenersDecodeNotAttempted'
+                };
+                return t(keyMap[String(status || '').toLowerCase()] || 'shortenersDecodePending');
+            }
+
+            function renderShortenersPanel(msg, rep) {
+                var body = document.getElementById('shortenersBody');
+                var countEl = document.getElementById('shortenersCount');
+                if (!body || !countEl) return;
+                body.textContent = '';
+                var links = (msg && msg.links) ? msg.links : [];
+                var shorteners = [];
+                for (var i = 0; i < links.length; i++) {
+                    if (links[i] && links[i].isShortener) shorteners.push(links[i]);
+                }
+                countEl.textContent = String(shorteners.length);
+                if (!shorteners.length) {
+                    var p = document.createElement('div');
+                    p.className = 'viewer-small';
+                    p.textContent = t('shortenersNone');
+                    body.appendChild(p);
+                    return;
+                }
+
+                var repMap = Object.create(null);
+                if (rep && Array.isArray(rep.items)) {
+                    for (var ri = 0; ri < rep.items.length; ri++) {
+                        var item = rep.items[ri];
+                        if (!item || String(item.type || '').toLowerCase() !== 'url') continue;
+                        var itemKey = String(item.entity || '').trim().toLowerCase();
+                        if (itemKey) repMap[itemKey] = item;
+                    }
+                }
+
+                var table = document.createElement('table');
+                table.className = 'link-table';
+                var thead = document.createElement('thead');
+                thead.innerHTML = '<tr><th>ID</th><th>' + escapeHtml(t('shortenersProvider')) + '</th><th>' + escapeHtml(t('shortenersShortUrl')) + '</th><th>' + escapeHtml(t('shortenersFinalUrl')) + '</th><th>' + escapeHtml(t('shortenersFinalHost')) + '</th><th>' + escapeHtml(t('shortenersRedirects')) + '</th><th>' + escapeHtml(t('shortenersStatus')) + '</th><th>' + escapeHtml(t('shortenersFinalReputation')) + '</th></tr>';
+                table.appendChild(thead);
+                var tbody = document.createElement('tbody');
+
+                for (var si = 0; si < shorteners.length; si++) {
+                    var link = shorteners[si];
+                    var repItem = repMap[String(link.href || '').trim().toLowerCase()] || null;
+                    var decode = repItem && repItem.decode ? repItem.decode : null;
+                    var finalRep = repItem && repItem.finalReputation ? repItem.finalReputation : null;
+                    var finalUrl = decode && decode.finalUrl ? String(decode.finalUrl) : '-';
+                    var finalHost = decode && decode.finalHost ? String(decode.finalHost) : '-';
+                    var redirects = decode && typeof decode.redirectCount === 'number' ? String(decode.redirectCount) : '-';
+                    var status = decode && decode.status ? String(decode.status) : 'not_attempted';
+
+                    var tr = document.createElement('tr');
+                    var tdId = document.createElement('td'); tdId.textContent = link.id || '';
+                    var tdProvider = document.createElement('td'); tdProvider.textContent = link.shortenerProvider || '-';
+                    var tdShort = document.createElement('td'); tdShort.textContent = link.href || '';
+                    var tdFinal = document.createElement('td'); tdFinal.textContent = finalUrl;
+                    var tdHost = document.createElement('td'); tdHost.textContent = finalHost;
+                    var tdRedirects = document.createElement('td'); tdRedirects.textContent = redirects;
+                    var tdStatus = document.createElement('td'); tdStatus.textContent = formatShortenerDecodeStatus(status);
+                    var tdRep = document.createElement('td');
+                    if (finalRep && finalRep.url && finalRep.url.severity) {
+                        var sev = String(finalRep.url.severity || '').toLowerCase();
+                        var badge = document.createElement('span');
+                        badge.className = 'badge badge-' + reputationBadgeClass(sev);
+                        badge.textContent = t('sev_' + sev) || sev;
+                        tdRep.appendChild(badge);
+                    } else if (finalRep && finalRep.host && finalRep.host.severity) {
+                        var sevHost = String(finalRep.host.severity || '').toLowerCase();
+                        var badgeHost = document.createElement('span');
+                        badgeHost.className = 'badge badge-' + reputationBadgeClass(sevHost);
+                        badgeHost.textContent = t('sev_' + sevHost) || sevHost;
+                        tdRep.appendChild(badgeHost);
+                    } else {
+                        tdRep.textContent = '-';
+                    }
+
+                    tr.appendChild(tdId);
+                    tr.appendChild(tdProvider);
+                    tr.appendChild(tdShort);
+                    tr.appendChild(tdFinal);
+                    tr.appendChild(tdHost);
+                    tr.appendChild(tdRedirects);
+                    tr.appendChild(tdStatus);
+                    tr.appendChild(tdRep);
+                    tbody.appendChild(tr);
+                }
+                table.appendChild(tbody);
+                body.appendChild(table);
             }
 
             function startViewerLinksReputation(links, tbodyEl) {
@@ -2578,7 +2755,7 @@ X-Mailer: Campaign Platform 4.2`
                     return;
                 }
 
-                var cacheKey = 'rep:viewer:v2:' + urls.join('|');
+                var cacheKey = 'rep:viewer:v3:' + urls.join('|');
                 try {
                     var cached = sessionStorage.getItem(cacheKey);
                     if (cached) {
@@ -2590,7 +2767,7 @@ X-Mailer: Campaign Platform 4.2`
                 fetch(REPUTATION_API_BASE + '/api/reputation', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ urls: urls, turnstileToken: (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })(), context: { auth: (currentReportData && currentReportData.authResults) ? { spf: currentReportData.authResults.spf, dkim: currentReportData.authResults.dkim, dmarc: currentReportData.authResults.dmarc } : {} } })
+                    body: JSON.stringify({ urls: urls, turnstileToken: (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })(), options: { expandShortUrls: true, maxUrlExpands: 10, includeRedirectChain: true }, context: { auth: (currentReportData && currentReportData.authResults) ? { spf: currentReportData.authResults.spf, dkim: currentReportData.authResults.dkim, dmarc: currentReportData.authResults.dmarc } : {} } })
                 }).then(function(r) {
                     if (r && r.status === 403) {
                         try { sessionStorage.removeItem('ts_ok_v1'); } catch (e) {}
@@ -2600,10 +2777,13 @@ X-Mailer: Campaign Platform 4.2`
                     return r.json();
                 }).then(function(rep) {
                     try { sessionStorage.setItem(cacheKey, JSON.stringify(rep)); } catch (e) {}
+                    currentViewerReputation = rep;
                     applyViewerUrlRep(rep, tbodyEl);
                 }).catch(function() {
+                    currentViewerReputation = null;
                     var cells = tbodyEl.querySelectorAll('td.rep-cell');
                     for (var ci = 0; ci < cells.length; ci++) cells[ci].textContent = '-';
+                    renderShortenersPanel(currentViewerMessage, null);
                 });
             }
 
@@ -2643,6 +2823,8 @@ X-Mailer: Campaign Platform 4.2`
                     badge.textContent = t('sev_' + sev) || sev;
                     cell.appendChild(badge);
                 }
+                currentViewerReputation = rep || null;
+                renderShortenersPanel(currentViewerMessage, rep || null);
             }
 
             function formatBytes(n) {
@@ -4871,7 +5053,7 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index41';
+            const APP_VERSION = 'index43';
 
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
