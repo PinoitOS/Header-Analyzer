@@ -2241,6 +2241,17 @@ X-Mailer: Campaign Platform 4.2`
                 if (!html) return links;
                 var parser = new DOMParser();
                 var doc = parser.parseFromString(String(html), 'text/html');
+                var seen = Object.create(null);
+
+                function addSeen(href) {
+                    href = String(href || '').trim();
+                    if (!href) return false;
+                    var key = href.toLowerCase();
+                    if (seen[key]) return false;
+                    seen[key] = true;
+                    return true;
+                }
+
                 // Remove <base> influence for URL parsing in analysis; we want to reflect the literal href.
                 var anchors = doc.querySelectorAll('a[href]');
                 for (var i = 0; i < anchors.length; i++) {
@@ -2266,7 +2277,20 @@ X-Mailer: Campaign Platform 4.2`
                             if (/@/.test(hrefRaw)) signals.push({ level: 'low', text: '@ in URL' });
                         }
                     }
+                    if (!addSeen(hrefRaw)) continue;
                     links.push(enrichLinkWithShortenerMeta({ visible: visible, href: hrefRaw, visibleHost: visibleHost, hrefHost: hrefHost, signals: signals, confidence: confidence }));
+                }
+
+                var urlRe = /\bhttps?:\/\/[^\s"'<>]+/gi;
+                var text = doc.body ? (doc.body.textContent || '') : '';
+                var m;
+                while ((m = urlRe.exec(text))) {
+                    var nakedUrl = String(m[0] || '').replace(/[),.;:!?]+$/, '');
+                    var nakedParsed = tryParseUrl(nakedUrl);
+                    var nakedHost = nakedParsed ? nakedParsed.hostname.toLowerCase() : null;
+                    if (!nakedHost) continue;
+                    if (!addSeen(nakedUrl)) continue;
+                    links.push(enrichLinkWithShortenerMeta({ visible: nakedUrl, href: nakedUrl, visibleHost: nakedHost, hrefHost: nakedHost, signals: [], confidence: 'low', kind: 'text-url' }));
                 }
                 return links;
             }
@@ -2292,6 +2316,18 @@ X-Mailer: Campaign Platform 4.2`
                     missingCid: 0
                 };
                 var links = [];
+                var seenLinks = Object.create(null);
+
+                function addLinkIfNew(link) {
+                    if (!link || typeof link !== 'object') return false;
+                    var href = String(link.href || '').trim();
+                    if (!href) return false;
+                    var key = href.toLowerCase();
+                    if (seenLinks[key]) return false;
+                    seenLinks[key] = true;
+                    links.push(enrichLinkWithShortenerMeta(link));
+                    return true;
+                }
 
                 function safeTextSnippet(node) {
                     if (!node) return '';
@@ -2383,7 +2419,33 @@ X-Mailer: Campaign Platform 4.2`
                         }
                     }
 
-                    links.push(enrichLinkWithShortenerMeta({ id: id, where: hint, snippet: snippet, visible: visible, href: hrefRaw, visibleHost: visibleHost, hrefHost: hrefHost, signals: signals, confidence: confidence, kind: (a.querySelector && a.querySelector('img')) ? 'image-link' : 'text-link' }));
+                    addLinkIfNew({ id: id, where: hint, snippet: snippet, visible: visible, href: hrefRaw, visibleHost: visibleHost, hrefHost: hrefHost, signals: signals, confidence: confidence, kind: (a.querySelector && a.querySelector('img')) ? 'image-link' : 'text-link' });
+                }
+
+                // Also collect naked URLs present as text inside the HTML body.
+                var walker = doc.createTreeWalker(doc.body || doc, NodeFilter.SHOW_TEXT, null, false);
+                var urlRe = /\bhttps?:\/\/[^\s"'<>]+/gi;
+                var textNode;
+                var nakedIndex = 1;
+                while ((textNode = walker.nextNode())) {
+                    var parent = textNode.parentElement;
+                    if (!parent) continue;
+                    if (parent.closest && parent.closest('a')) continue;
+                    var tag = parent.tagName ? parent.tagName.toLowerCase() : '';
+                    if (tag === 'script' || tag === 'style' || tag === 'title') continue;
+                    var textValue = String(textNode.nodeValue || '');
+                    urlRe.lastIndex = 0;
+                    var match;
+                    while ((match = urlRe.exec(textValue))) {
+                        var nakedUrl = String(match[0] || '').replace(/[),.;:!?]+$/, '');
+                        var nakedParsed = tryParseUrl(nakedUrl);
+                        var nakedHost = nakedParsed ? nakedParsed.hostname.toLowerCase() : null;
+                        if (!nakedHost) continue;
+                        var contextNode = parent.closest ? parent.closest('p,li,td,th,blockquote,footer,header,section,article,div') : parent;
+                        var snippet = safeTextSnippet(contextNode || parent);
+                        var hint = containerHintFor(parent);
+                        addLinkIfNew({ id: 'T' + nakedIndex++, where: hint, snippet: snippet, visible: nakedUrl, href: nakedUrl, visibleHost: nakedHost, hrefHost: nakedHost, signals: [], confidence: 'low', kind: 'text-url' });
+                    }
                 }
 
                 // Sanitize attributes.
@@ -5062,7 +5124,7 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index43';
+            const APP_VERSION = 'index44';
 
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
