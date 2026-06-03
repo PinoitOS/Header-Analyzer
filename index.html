@@ -5007,9 +5007,6 @@ X-Mailer: Campaign Platform 4.2`
                     return 4;
                 }
 
-                function uiVtUrl(url) {
-                    return 'https://www.virustotal.com/gui/url/' + String(url || '');
-                }
                 function uiVtDomain(domain) {
                     return 'https://www.virustotal.com/gui/domain/' + encodeURIComponent(String(domain || ''));
                 }
@@ -5037,9 +5034,8 @@ X-Mailer: Campaign Platform 4.2`
                                 type: 'url_final',
                                 severity: finalRep.url.severity || 'low',
                                 reasons: Array.isArray(finalRep.url.reasons) ? finalRep.url.reasons.slice() : [],
-                                sources: [
-                                    { name: 'URLhaus (web)', url: uiUrlhausSearch(finalUrlEntity) },
-                                    { name: 'VirusTotal (web)', url: uiVtUrl(finalUrlEntity) }
+                                sources: Array.isArray(finalRep.url.sources) && finalRep.url.sources.length ? finalRep.url.sources.slice() : [
+                                    { name: 'URLhaus (web)', url: uiUrlhausSearch(finalUrlEntity) }
                                 ]
                             });
                         }
@@ -5055,7 +5051,7 @@ X-Mailer: Campaign Platform 4.2`
                                 type: 'host_final',
                                 severity: finalRep.host.severity || 'low',
                                 reasons: Array.isArray(finalRep.host.reasons) ? finalRep.host.reasons.slice() : [],
-                                sources: [
+                                sources: Array.isArray(finalRep.host.sources) && finalRep.host.sources.length ? finalRep.host.sources.slice() : [
                                     { name: 'VirusTotal (web)', url: uiVtDomain(finalHostEntity) }
                                 ]
                             });
@@ -5217,7 +5213,7 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index54';
+            const APP_VERSION = 'index55';
 
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
