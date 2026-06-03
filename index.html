@@ -1253,7 +1253,9 @@ X-Mailer: Campaign Platform 4.2`
                 shortenersDecodeBlocked: 'Bloqueado',
                 shortenersDecodeMaxRedirects: 'Max redirects',
                 shortenersDecodeInvalid: 'Invalida',
-                shortenersDecodeNotAttempted: 'No intentado'
+                shortenersDecodeNotAttempted: 'No intentado',
+                shortenersBlockedAt: 'Bloqueado en',
+                shortenersBlockedAfterRedirect: 'Bloqueo tras redireccion'
             });
             Object.assign(translations.en, {
                 viewerTab: 'Email viewer',
@@ -1284,7 +1286,9 @@ X-Mailer: Campaign Platform 4.2`
                 shortenersDecodeBlocked: 'Blocked',
                 shortenersDecodeMaxRedirects: 'Max redirects',
                 shortenersDecodeInvalid: 'Invalid',
-                shortenersDecodeNotAttempted: 'Not attempted'
+                shortenersDecodeNotAttempted: 'Not attempted',
+                shortenersBlockedAt: 'Blocked at',
+                shortenersBlockedAfterRedirect: 'Blocked after redirect'
             });
 
             // Differentiate header IOCs vs viewer IOCs.
@@ -2745,6 +2749,22 @@ X-Mailer: Campaign Platform 4.2`
                 return t(keyMap[String(status || '').toLowerCase()] || 'shortenersDecodePending');
             }
 
+            function buildShortenerStatusDetail(decode) {
+                if (!decode || typeof decode !== 'object') return '';
+                var blockedAtUrl = decode.blockedAtUrl ? String(decode.blockedAtUrl) : '';
+                var blockedAtMethod = decode.blockedAtMethod ? String(decode.blockedAtMethod).toUpperCase() : '';
+                var blockedAtStatus = (typeof decode.blockedAtStatus === 'number') ? String(decode.blockedAtStatus) : '';
+                var parts = [];
+                if (blockedAtMethod) parts.push(blockedAtMethod);
+                if (blockedAtStatus) parts.push(blockedAtStatus);
+                if (blockedAtUrl) parts.push(blockedAtUrl);
+                if (!parts.length && decode.partial !== 'blocked_after_redirect') return '';
+                var prefix = decode.partial === 'blocked_after_redirect'
+                    ? t('shortenersBlockedAfterRedirect')
+                    : t('shortenersBlockedAt');
+                return prefix + ': ' + parts.join(' | ');
+            }
+
             function renderShortenersPanel(msg, rep) {
                 var body = document.getElementById('shortenersBody');
                 var countEl = document.getElementById('shortenersCount');
@@ -2798,7 +2818,16 @@ X-Mailer: Campaign Platform 4.2`
                     var tdFinal = document.createElement('td'); tdFinal.textContent = finalUrl;
                     var tdHost = document.createElement('td'); tdHost.textContent = finalHost;
                     var tdRedirects = document.createElement('td'); tdRedirects.textContent = redirects;
-                    var tdStatus = document.createElement('td'); tdStatus.textContent = formatShortenerDecodeStatus(status);
+                    var tdStatus = document.createElement('td');
+                    tdStatus.textContent = formatShortenerDecodeStatus(status);
+                    var statusDetail = buildShortenerStatusDetail(decode);
+                    if (statusDetail) {
+                        var detail = document.createElement('div');
+                        detail.className = 'viewer-small';
+                        detail.textContent = statusDetail;
+                        tdStatus.appendChild(document.createElement('br'));
+                        tdStatus.appendChild(detail);
+                    }
                     var tdRep = document.createElement('td');
                     if (finalRep && finalRep.url && finalRep.url.severity) {
                         var sev = String(finalRep.url.severity || '').toLowerCase();
@@ -5116,7 +5145,7 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index46';
+            const APP_VERSION = 'index47';
 
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
