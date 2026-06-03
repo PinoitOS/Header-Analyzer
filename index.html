@@ -5008,7 +5008,7 @@ X-Mailer: Campaign Platform 4.2`
                 }
 
                 function uiVtUrl(url) {
-                    return 'https://www.virustotal.com/gui/url/' + encodeURIComponent(String(url || ''));
+                    return 'https://www.virustotal.com/gui/url/' + String(url || '');
                 }
                 function uiVtDomain(domain) {
                     return 'https://www.virustotal.com/gui/domain/' + encodeURIComponent(String(domain || ''));
@@ -5217,7 +5217,7 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index53';
+            const APP_VERSION = 'index54';
 
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
