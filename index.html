@@ -1989,6 +1989,7 @@ X-Mailer: Campaign Platform 4.2`
             var currentViewerMessage = null;
             var currentViewerReputation = null;
             var currentViewerMode = 'html';
+            var currentViewerLinksBody = null;
             var currentObjectUrls = [];
             var viewerAllowRemote = localStorage.getItem('viewer_allow_remote') === '1';
 
@@ -2658,6 +2659,7 @@ X-Mailer: Campaign Platform 4.2`
             function renderLinksPanel(msg) {
                 var body = document.getElementById('linksBody');
                 var countEl = document.getElementById('linksCount');
+                currentViewerLinksBody = body || null;
                 body.textContent = '';
                 var links = (msg && msg.links) ? msg.links : [];
                 countEl.textContent = String(links.length);
@@ -2831,55 +2833,7 @@ X-Mailer: Campaign Platform 4.2`
             function startViewerLinksReputation(links, tbodyEl) {
                 if (!tbodyEl) return;
                 if (!Array.isArray(links) || !links.length) return;
-
-                var urls = [];
-                var seen = Object.create(null);
-                for (var i = 0; i < links.length; i++) {
-                    var u = String((links[i] && links[i].href) || '').trim();
-                    if (!/^https?:\/\//i.test(u)) continue;
-                    var k = u.toLowerCase();
-                    if (seen[k]) continue;
-                    seen[k] = true;
-                    urls.push(u);
-                    if (urls.length >= 15) break;
-                }
-                if (!urls.length) {
-                    // Clear placeholders
-                    var cells = tbodyEl.querySelectorAll('td.rep-cell');
-                    for (var ci = 0; ci < cells.length; ci++) cells[ci].textContent = '-';
-                    return;
-                }
-
-                var cacheKey = 'rep:viewer:v3:' + urls.join('|');
-                try {
-                    var cached = sessionStorage.getItem(cacheKey);
-                    if (cached) {
-                        applyViewerUrlRep(JSON.parse(cached), tbodyEl);
-                        return;
-                    }
-                } catch (e) {}
-
-                fetch(REPUTATION_API_BASE + '/api/reputation', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ urls: urls, turnstileToken: (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })(), options: { expandShortUrls: true, maxUrlExpands: 10, includeRedirectChain: true }, context: { auth: (currentReportData && currentReportData.authResults) ? { spf: currentReportData.authResults.spf, dkim: currentReportData.authResults.dkim, dmarc: currentReportData.authResults.dmarc } : {} } })
-                }).then(function(r) {
-                    if (r && r.status === 403) {
-                        try { sessionStorage.removeItem('ts_ok_v1'); } catch (e) {}
-                        try { sessionStorage.removeItem('ts_token_v1'); } catch (e) {}
-                        throw new Error('turnstile_required');
-                    }
-                    return r.json();
-                }).then(function(rep) {
-                    try { sessionStorage.setItem(cacheKey, JSON.stringify(rep)); } catch (e) {}
-                    currentViewerReputation = rep;
-                    applyViewerUrlRep(rep, tbodyEl);
-                }).catch(function() {
-                    currentViewerReputation = null;
-                    var cells = tbodyEl.querySelectorAll('td.rep-cell');
-                    for (var ci = 0; ci < cells.length; ci++) cells[ci].textContent = '-';
-                    renderShortenersPanel(currentViewerMessage, null);
-                });
+                applyViewerUrlRep(currentViewerReputation, tbodyEl);
             }
 
             function applyViewerUrlRep(rep, tbodyEl) {
@@ -2920,6 +2874,16 @@ X-Mailer: Campaign Platform 4.2`
                 }
                 currentViewerReputation = rep || null;
                 renderShortenersPanel(currentViewerMessage, rep || null);
+            }
+
+            function refreshViewerReputationPanels(rep) {
+                var nextRep = rep || currentViewerReputation || null;
+                currentViewerReputation = nextRep;
+                if (currentViewerLinksBody) {
+                    applyViewerUrlRep(nextRep, currentViewerLinksBody);
+                } else {
+                    renderShortenersPanel(currentViewerMessage, nextRep);
+                }
             }
 
             function formatBytes(n) {
@@ -4906,6 +4870,7 @@ X-Mailer: Campaign Platform 4.2`
                     var cached = sessionStorage.getItem(cacheKey);
                     if (cached) {
                         var parsed = JSON.parse(cached);
+                        refreshViewerReputationPanels(parsed);
                         renderReputationResult(parsed, statusEl, tbodyEl);
                         return;
                     }
@@ -4925,6 +4890,7 @@ X-Mailer: Campaign Platform 4.2`
                     return r.json();
                 }).then(function(rep) {
                     try { sessionStorage.setItem(cacheKey, JSON.stringify(rep)); } catch (e) {}
+                    refreshViewerReputationPanels(rep);
                     renderReputationResult(rep, statusEl, tbodyEl);
                 }).catch(function(err) {
                     statusEl.textContent = t('reputationError');
@@ -5148,7 +5114,7 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index44';
+            const APP_VERSION = 'index45';
 
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
