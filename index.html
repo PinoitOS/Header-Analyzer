@@ -1315,10 +1315,6 @@ X-Mailer: Campaign Platform 4.2`
                 repReasons: 'Motivos',
                 repSources: 'Fuentes',
                 repOpen: 'Abrir',
-                repResolvedStatus: 'Resolucion',
-                repFinalUrl: 'URL final',
-                repFinalHost: 'Host final',
-                repFinalSeverity: 'Severidad final',
                 sev_trustworthy: 'Confiable',
                 sev_low: 'Baja',
                 sev_medium: 'Media',
@@ -1337,10 +1333,6 @@ X-Mailer: Campaign Platform 4.2`
                 repReasons: 'Reasons',
                 repSources: 'Sources',
                 repOpen: 'Open',
-                repResolvedStatus: 'Resolution',
-                repFinalUrl: 'Final URL',
-                repFinalHost: 'Final host',
-                repFinalSeverity: 'Final severity',
                 sev_trustworthy: 'Trustworthy',
                 sev_low: 'Low',
                 sev_medium: 'Medium',
@@ -5008,12 +5000,69 @@ X-Mailer: Campaign Platform 4.2`
                 function typeRank(t) {
                     t = String(t || '').toLowerCase();
                     if (t === 'url') return 1;
+                    if (t === 'url_final') return 1;
                     if (t === 'host' || t === 'domain') return 2;
+                    if (t === 'host_final') return 2;
                     if (t === 'ip') return 3;
                     return 4;
                 }
 
-                var items = rep.items.slice();
+                function uiVtUrl(url) {
+                    return 'https://www.virustotal.com/gui/url/' + encodeURIComponent(String(url || ''));
+                }
+                function uiVtDomain(domain) {
+                    return 'https://www.virustotal.com/gui/domain/' + encodeURIComponent(String(domain || ''));
+                }
+                function uiUrlhausSearch(value) {
+                    return 'https://urlhaus.abuse.ch/browse.php?search=' + encodeURIComponent(String(value || ''));
+                }
+
+                var items = [];
+                var seenExtra = Object.create(null);
+                var baseItems = rep.items.slice();
+                for (var bi = 0; bi < baseItems.length; bi++) {
+                    var baseItem = baseItems[bi];
+                    items.push(baseItem);
+                    if (!baseItem || String(baseItem.type || '').toLowerCase() !== 'url') continue;
+                    var finalRep = baseItem.finalReputation || null;
+                    if (!finalRep) continue;
+
+                    if (finalRep.url && finalRep.url.entity) {
+                        var finalUrlEntity = String(finalRep.url.entity).trim();
+                        var finalUrlKey = 'url_final|' + finalUrlEntity.toLowerCase();
+                        if (finalUrlEntity && !seenExtra[finalUrlKey]) {
+                            seenExtra[finalUrlKey] = true;
+                            items.push({
+                                entity: finalUrlEntity,
+                                type: 'url_final',
+                                severity: finalRep.url.severity || 'low',
+                                reasons: Array.isArray(finalRep.url.reasons) ? finalRep.url.reasons.slice() : [],
+                                sources: [
+                                    { name: 'URLhaus (web)', url: uiUrlhausSearch(finalUrlEntity) },
+                                    { name: 'VirusTotal (web)', url: uiVtUrl(finalUrlEntity) }
+                                ]
+                            });
+                        }
+                    }
+
+                    if (finalRep.host && finalRep.host.entity) {
+                        var finalHostEntity = String(finalRep.host.entity).trim();
+                        var finalHostKey = 'host_final|' + finalHostEntity.toLowerCase();
+                        if (finalHostEntity && !seenExtra[finalHostKey]) {
+                            seenExtra[finalHostKey] = true;
+                            items.push({
+                                entity: finalHostEntity,
+                                type: 'host_final',
+                                severity: finalRep.host.severity || 'low',
+                                reasons: Array.isArray(finalRep.host.reasons) ? finalRep.host.reasons.slice() : [],
+                                sources: [
+                                    { name: 'VirusTotal (web)', url: uiVtDomain(finalHostEntity) }
+                                ]
+                            });
+                        }
+                    }
+                }
+
                 items.sort(function(a, b) {
                     var sa = sevRank(a && a.severity);
                     var sb = sevRank(b && b.severity);
@@ -5038,27 +5087,8 @@ X-Mailer: Campaign Platform 4.2`
                     eSub.className = 'rep-entity-sub';
                     var typePill = document.createElement('span');
                     typePill.className = 'rep-type-pill';
-                    typePill.textContent = String(it.type || '').toUpperCase() || '-';
+                    typePill.textContent = String(it.type || '').replace('_', ' ').toUpperCase() || '-';
                     eSub.appendChild(typePill);
-                    if (String(it.type || '').toLowerCase() === 'url' && it.decode) {
-                        var decode = it.decode;
-                        var decodedStatus = document.createElement('div');
-                        decodedStatus.className = 'field-desc no-translate';
-                        decodedStatus.textContent = t('repResolvedStatus') + ': ' + formatShortenerDecodeStatus(decode.status || 'not_attempted');
-                        eSub.appendChild(decodedStatus);
-                        if (decode.finalUrl) {
-                            var finalUrlLine = document.createElement('div');
-                            finalUrlLine.className = 'field-desc no-translate';
-                            finalUrlLine.textContent = t('repFinalUrl') + ': ' + String(decode.finalUrl);
-                            eSub.appendChild(finalUrlLine);
-                        }
-                        if (decode.finalHost) {
-                            var finalHostLine = document.createElement('div');
-                            finalHostLine.className = 'field-desc no-translate';
-                            finalHostLine.textContent = t('repFinalHost') + ': ' + String(decode.finalHost);
-                            eSub.appendChild(finalHostLine);
-                        }
-                    }
                     tdEntity.appendChild(eTop);
                     tdEntity.appendChild(eSub);
 
@@ -5086,17 +5116,6 @@ X-Mailer: Campaign Platform 4.2`
                         empty.textContent = 'Empty';
                         tdR.appendChild(empty);
                     }
-                    if (String(it.type || '').toLowerCase() === 'url' && it.finalReputation) {
-                        var finalRep = it.finalReputation;
-                        var finalSev = (finalRep.url && finalRep.url.severity) || (finalRep.host && finalRep.host.severity) || '';
-                        if (finalSev) {
-                            var finalLine = document.createElement('div');
-                            finalLine.className = 'rep-reason';
-                            finalLine.textContent = t('repFinalSeverity') + ': ' + (t('sev_' + String(finalSev).toLowerCase()) || String(finalSev));
-                            tdR.appendChild(finalLine);
-                        }
-                    }
-
                     var tdSrc = document.createElement('td');
                     if (Array.isArray(it.sources)) {
                         var sWrap = document.createElement('div');
@@ -5198,7 +5217,7 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index52';
+            const APP_VERSION = 'index53';
 
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
