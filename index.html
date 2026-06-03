@@ -2242,6 +2242,7 @@ X-Mailer: Campaign Platform 4.2`
                 var parser = new DOMParser();
                 var doc = parser.parseFromString(String(html), 'text/html');
                 var seen = Object.create(null);
+                var urlRe = /\bhttps?:\/\/[^\s"'<>]+/gi;
 
                 function addSeen(href) {
                     href = String(href || '').trim();
@@ -2250,6 +2251,26 @@ X-Mailer: Campaign Platform 4.2`
                     if (seen[key]) return false;
                     seen[key] = true;
                     return true;
+                }
+
+                function addNakedUrlsFromNode(node, kind, confidence) {
+                    if (!node) return;
+                    var parent = node.parentElement || node.parentNode;
+                    if (!parent) return;
+                    if (parent.closest && parent.closest('a')) return;
+                    var tag = parent.tagName ? parent.tagName.toLowerCase() : '';
+                    if (tag === 'script' || tag === 'style' || tag === 'title') return;
+                    var textValue = String(node.nodeValue || node.textContent || '');
+                    urlRe.lastIndex = 0;
+                    var match;
+                    while ((match = urlRe.exec(textValue))) {
+                        var nakedUrl = String(match[0] || '').replace(/[),.;:!?]+$/, '');
+                        var nakedParsed = tryParseUrl(nakedUrl);
+                        var nakedHost = nakedParsed ? nakedParsed.hostname.toLowerCase() : null;
+                        if (!nakedHost) continue;
+                        if (!addSeen(nakedUrl)) continue;
+                        links.push(enrichLinkWithShortenerMeta({ visible: nakedUrl, href: nakedUrl, visibleHost: nakedHost, hrefHost: nakedHost, signals: [], confidence: confidence || 'low', kind: kind || 'text-url' }));
+                    }
                 }
 
                 // Remove <base> influence for URL parsing in analysis; we want to reflect the literal href.
@@ -2281,7 +2302,6 @@ X-Mailer: Campaign Platform 4.2`
                     links.push(enrichLinkWithShortenerMeta({ visible: visible, href: hrefRaw, visibleHost: visibleHost, hrefHost: hrefHost, signals: signals, confidence: confidence }));
                 }
 
-                var urlRe = /\bhttps?:\/\/[^\s"'<>]+/gi;
                 var text = doc.body ? (doc.body.textContent || '') : '';
                 var m;
                 while ((m = urlRe.exec(text))) {
@@ -2292,6 +2312,10 @@ X-Mailer: Campaign Platform 4.2`
                     if (!addSeen(nakedUrl)) continue;
                     links.push(enrichLinkWithShortenerMeta({ visible: nakedUrl, href: nakedUrl, visibleHost: nakedHost, hrefHost: nakedHost, signals: [], confidence: 'low', kind: 'text-url' }));
                 }
+
+                var commentWalker = doc.createTreeWalker(doc.body || doc, NodeFilter.SHOW_COMMENT, null, false);
+                var commentNode;
+                while ((commentNode = commentWalker.nextNode())) addNakedUrlsFromNode(commentNode, 'comment-url', 'low');
                 return links;
             }
 
@@ -2422,18 +2446,18 @@ X-Mailer: Campaign Platform 4.2`
                     addLinkIfNew({ id: id, where: hint, snippet: snippet, visible: visible, href: hrefRaw, visibleHost: visibleHost, hrefHost: hrefHost, signals: signals, confidence: confidence, kind: (a.querySelector && a.querySelector('img')) ? 'image-link' : 'text-link' });
                 }
 
-                // Also collect naked URLs present as text inside the HTML body.
-                var walker = doc.createTreeWalker(doc.body || doc, NodeFilter.SHOW_TEXT, null, false);
+                // Also collect naked URLs present as text or comments inside the HTML body.
+                var walker = doc.createTreeWalker(doc.body || doc, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT, null, false);
                 var urlRe = /\bhttps?:\/\/[^\s"'<>]+/gi;
                 var textNode;
                 var nakedIndex = 1;
                 while ((textNode = walker.nextNode())) {
-                    var parent = textNode.parentElement;
+                    var parent = textNode.parentElement || textNode.parentNode;
                     if (!parent) continue;
                     if (parent.closest && parent.closest('a')) continue;
                     var tag = parent.tagName ? parent.tagName.toLowerCase() : '';
                     if (tag === 'script' || tag === 'style' || tag === 'title') continue;
-                    var textValue = String(textNode.nodeValue || '');
+                    var textValue = String(textNode.nodeValue || textNode.textContent || '');
                     urlRe.lastIndex = 0;
                     var match;
                     while ((match = urlRe.exec(textValue))) {
