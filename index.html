@@ -3108,7 +3108,7 @@ X-Mailer: Campaign Platform 4.2`
                     }
                     const limited = extracted.length > MAX_INPUT_CHARS ? extracted.slice(0, MAX_INPUT_CHARS) : extracted;
                     if (!confirmOverwriteIfNeeded(limited)) return;
-                    loadHeadersIntoEditor(limited, { format: 'eml', note: null, autoAnalyze: true });
+                    loadHeadersIntoEditor(limited, { format: 'eml', note: null, autoAnalyze: false });
 
                     try {
                         var msg = parseEmlToViewerMessage(raw);
@@ -3117,6 +3117,7 @@ X-Mailer: Campaign Platform 4.2`
                     } catch (e) {
                         // Viewer is best-effort; keep header analysis functional.
                     }
+                    analyzeHeaders();
                 };
                 reader.onerror = function() { alert(t('invalidEml')); };
                 reader.readAsText(file);
@@ -3146,7 +3147,7 @@ X-Mailer: Campaign Platform 4.2`
                         const limited = extracted.length > MAX_INPUT_CHARS ? extracted.slice(0, MAX_INPUT_CHARS) : extracted;
                         if (!confirmOverwriteIfNeeded(limited)) return;
                         const receivedCount = (limited.match(/\nReceived:/gi) || []).length + (limited.match(/^Received:/gmi) || []).length;
-                        loadHeadersIntoEditor(limited, { format: 'msg', note: t('msgReceivedNote'), receivedCount: receivedCount, autoAnalyze: true });
+                        loadHeadersIntoEditor(limited, { format: 'msg', note: t('msgReceivedNote'), receivedCount: receivedCount, autoAnalyze: false });
 
                         // Viewer
                         try {
@@ -3194,6 +3195,7 @@ X-Mailer: Campaign Platform 4.2`
                         } catch (e) {
                             // ignore viewer errors
                         }
+                        analyzeHeaders();
                     } catch (e) {
                         alert(t('invalidMsg'));
                     }
@@ -4865,7 +4867,7 @@ X-Mailer: Campaign Platform 4.2`
                     return;
                 }
 
-                var cacheKey = 'rep:v2:' + [main.ip || '', main.fromDomain || '', main.mailFromDomain || '', auth.spf, auth.dkim, auth.dmarc, 'u:' + urls.join(',')].join('|');
+                var cacheKey = 'rep:v3:' + [main.ip || '', main.fromDomain || '', main.mailFromDomain || '', auth.spf, auth.dkim, auth.dmarc, 'u:' + urls.join(',')].join('|');
                 try {
                     var cached = sessionStorage.getItem(cacheKey);
                     if (cached) {
@@ -4880,7 +4882,7 @@ X-Mailer: Campaign Platform 4.2`
                 fetch(REPUTATION_API_BASE + '/api/reputation', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ips: ips, hosts: hosts, domains: domains, urls: urls, turnstileToken: (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })(), context: { auth: auth, ms: ms, main: main } })
+                    body: JSON.stringify({ ips: ips, hosts: hosts, domains: domains, urls: urls, turnstileToken: (function(){ try { return sessionStorage.getItem('ts_token_v1') || ''; } catch (e) { return ''; } })(), options: { expandShortUrls: true, maxUrlExpands: 10, includeRedirectChain: true }, context: { auth: auth, ms: ms, main: main } })
                 }).then(function(r) {
                     if (r && r.status === 403) {
                         try { sessionStorage.removeItem('ts_ok_v1'); } catch (e) {}
@@ -5114,7 +5116,7 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index45';
+            const APP_VERSION = 'index46';
 
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
