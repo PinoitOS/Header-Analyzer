@@ -1255,7 +1255,8 @@ X-Mailer: Campaign Platform 4.2`
                 shortenersDecodeInvalid: 'Invalida',
                 shortenersDecodeNotAttempted: 'No intentado',
                 shortenersBlockedAt: 'Bloqueado en',
-                shortenersBlockedAfterRedirect: 'Bloqueo tras redireccion'
+                shortenersBlockedAfterRedirect: 'Bloqueo tras redireccion',
+                shortenersFailedAt: 'Fallo en'
             });
             Object.assign(translations.en, {
                 viewerTab: 'Email viewer',
@@ -1288,7 +1289,8 @@ X-Mailer: Campaign Platform 4.2`
                 shortenersDecodeInvalid: 'Invalid',
                 shortenersDecodeNotAttempted: 'Not attempted',
                 shortenersBlockedAt: 'Blocked at',
-                shortenersBlockedAfterRedirect: 'Blocked after redirect'
+                shortenersBlockedAfterRedirect: 'Blocked after redirect',
+                shortenersFailedAt: 'Failed at'
             });
 
             // Differentiate header IOCs vs viewer IOCs.
@@ -2751,10 +2753,20 @@ X-Mailer: Campaign Platform 4.2`
 
             function buildShortenerStatusDetail(decode) {
                 if (!decode || typeof decode !== 'object') return '';
+                var failedAtUrl = decode.failedAtUrl ? String(decode.failedAtUrl) : '';
+                var failedAtMethod = decode.failedAtMethod ? String(decode.failedAtMethod).toUpperCase() : '';
+                var failedAtStatus = (typeof decode.failedAtStatus === 'number') ? String(decode.failedAtStatus) : '';
+                var failedReason = decode.failedReason ? String(decode.failedReason) : '';
                 var blockedAtUrl = decode.blockedAtUrl ? String(decode.blockedAtUrl) : '';
                 var blockedAtMethod = decode.blockedAtMethod ? String(decode.blockedAtMethod).toUpperCase() : '';
                 var blockedAtStatus = (typeof decode.blockedAtStatus === 'number') ? String(decode.blockedAtStatus) : '';
                 var parts = [];
+                if (failedAtMethod) parts.push(failedAtMethod);
+                if (failedAtStatus) parts.push(failedAtStatus);
+                if (failedReason && failedReason !== 'failed') parts.push(failedReason);
+                if (failedAtUrl) parts.push(failedAtUrl);
+                if (parts.length) return t('shortenersFailedAt') + ': ' + parts.join(' | ');
+                parts = [];
                 if (blockedAtMethod) parts.push(blockedAtMethod);
                 if (blockedAtStatus) parts.push(blockedAtStatus);
                 if (blockedAtUrl) parts.push(blockedAtUrl);
@@ -5145,7 +5157,7 @@ X-Mailer: Campaign Platform 4.2`
                 downloadText(report, pdfEscapeNamePart((data && data.subject) || 'email-header-analysis') + '-report.txt');
             };
 
-            const APP_VERSION = 'index47';
+            const APP_VERSION = 'index48';
 
             const EXPORT_SCHEMA_VERSION = 2;
             const EXPORT_TRUNCATE_LIMIT = 10000;
